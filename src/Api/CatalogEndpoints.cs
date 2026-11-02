@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 using CoffeeShop.Application;
 
@@ -14,8 +15,19 @@ public static class CatalogEndpoints
 
     public static void MapCatalogEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/products", GetProducts);
-        app.MapGet("/skus/{id:int}/price", GetSkuPrice);
+        var catalog = app.MapGroup("").WithTags("Catalog");
+
+        catalog.MapGet("/products", GetProducts)
+            .WithName("GetProducts")
+            .WithSummary("Lists products with their SKUs.")
+            .Produces<IReadOnlyList<ProductResponse>>();
+
+        catalog.MapGet("/skus/{id:int}/price", GetSkuPrice)
+            .WithName("GetSkuPrice")
+            .WithSummary("Returns the price of a SKU effective at a given instant.")
+            .Produces<PriceResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> GetProducts(CatalogService catalog, CancellationToken ct)
@@ -28,7 +40,11 @@ public static class CatalogEndpoints
     }
 
     private static async Task<IResult> GetSkuPrice(
-        int id, string? asOf, CatalogService catalog, TimeProvider clock, CancellationToken ct)
+        int id,
+        [Description("ISO 8601 date or date-time, read as UTC without an offset. Defaults to the current time.")] string? asOf,
+        CatalogService catalog,
+        TimeProvider clock,
+        CancellationToken ct)
     {
         var instant = clock.GetUtcNow();
         if (asOf is not null && !TryParseAsOf(asOf, out instant))

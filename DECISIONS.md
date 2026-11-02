@@ -10,3 +10,5 @@
 - Migrations are applied explicitly with `dotnet ef`, never at startup.
 - Pinned System.Security.Cryptography.Pkcs 10.0.14 directly: the 9.0.11 pulled in by EF Core SqlServer has known CVEs.
 - SQL Server tests use a temporary LocalDB database on Windows; other platforms need `COFFEESHOP_TEST_SQLSERVER` or they report as skipped.
+- API docs use the official `Microsoft.AspNetCore.OpenApi` generator with Swashbuckle SwaggerUI, and are exposed in Development only.
+- Root `openapi.json` is a snapshot without `servers`, kept in sync by a test; regenerate with `UPDATE_OPENAPI=1 dotnet test --filter Committed_document`.
