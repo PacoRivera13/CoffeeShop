@@ -1,6 +1,5 @@
 using System.Globalization;
 using CoffeeShop.Application;
-using CoffeeShop.Domain.Pricing;
 
 namespace CoffeeShop.Api;
 
@@ -38,24 +37,14 @@ public static class CatalogEndpoints
                 title: "Invalid asOf",
                 detail: "Use ISO 8601, e.g. 2026-06-01 or 2026-06-01T00:00:00Z. Values without offset are UTC; encode '+' as %2B.");
 
-        try
-        {
-            var price = await catalog.GetPriceAsync(id, instant, ct);
+        var price = await catalog.GetPriceAsync(id, instant, ct);
 
-            return price is null
-                ? Results.Problem(
-                    statusCode: StatusCodes.Status404NotFound,
-                    title: "SKU not found",
-                    detail: $"SKU {id} does not exist.")
-                : Results.Ok(new PriceResponse(id, price.Id, price.Amount, price.Currency, price.EffectiveFrom, instant));
-        }
-        catch (NoEffectivePriceException ex)
-        {
-            return Results.Problem(
+        return price is null
+            ? Results.Problem(
                 statusCode: StatusCodes.Status404NotFound,
-                title: "No effective price",
-                detail: ex.Message);
-        }
+                title: "SKU not found",
+                detail: $"SKU {id} does not exist.")
+            : Results.Ok(new PriceResponse(id, price.Id, price.Amount, price.Currency, price.EffectiveFrom, instant));
     }
 
     private static bool TryParseAsOf(string value, out DateTimeOffset asOf) =>

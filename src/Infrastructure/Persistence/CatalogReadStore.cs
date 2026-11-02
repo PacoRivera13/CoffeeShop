@@ -15,8 +15,8 @@ internal sealed class CatalogReadStore(CoffeeShopDbContext db) : ICatalogReadSto
     public Task<bool> SkuExistsAsync(int skuId, CancellationToken ct) =>
         db.Skus.AnyAsync(s => s.Id == skuId, ct);
 
-    public async Task<IReadOnlyList<EffectivePrice>> GetPricesAsync(int skuId, CancellationToken ct) =>
+    public async Task<IReadOnlyList<EffectivePrice>> GetPricesAsync(int skuId, DateTimeOffset asOf, CancellationToken ct) =>
         await db.EffectivePrices.AsNoTracking()
-            .Where(p => p.SkuId == skuId)
+            .Where(p => p.SkuId == skuId && p.EffectiveFrom <= asOf)
             .ToListAsync(ct);
 }

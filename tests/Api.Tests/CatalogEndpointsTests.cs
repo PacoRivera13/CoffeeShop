@@ -117,7 +117,8 @@ public class CatalogEndpointsTests : IClassFixture<WebApplicationFactory<Program
 
         public Task<bool> SkuExistsAsync(int skuId, CancellationToken ct) => Task.FromResult(skuId == 1);
 
-        public Task<IReadOnlyList<EffectivePrice>> GetPricesAsync(int skuId, CancellationToken ct) =>
-            Task.FromResult<IReadOnlyList<EffectivePrice>>(Prices);
+        public Task<IReadOnlyList<EffectivePrice>> GetPricesAsync(int skuId, DateTimeOffset asOf, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<EffectivePrice>>(
+                Prices.Where(p => p.SkuId == skuId && p.EffectiveFrom <= asOf).ToList());
     }
 }
