@@ -17,6 +17,9 @@ public sealed class MsSqlFixture : IAsyncLifetime
 {
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
+    public string AdminEmail { get; } = $"{Guid.NewGuid():N}@example.test";
+    public string AdminPassword { get; } = $"{Guid.NewGuid():N}Aa1!";
+
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
     public async Task InitializeAsync()
@@ -27,7 +30,7 @@ public sealed class MsSqlFixture : IAsyncLifetime
             new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(_container.GetConnectionString()).Options);
         await db.Database.MigrateAsync();
 
-        Factory = CreateFactory();
+        Factory = CreateFactory(("Admin:Email", AdminEmail), ("Admin:Password", AdminPassword));
     }
 
     public WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>

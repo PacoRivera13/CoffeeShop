@@ -35,7 +35,7 @@ internal sealed class EffectivePriceConfiguration : IEntityTypeConfiguration<Eff
     {
         builder.ToTable(t =>
         {
-            t.HasCheckConstraint("CK_EffectivePrices_Amount", "[Amount] >= 0");
+            t.HasCheckConstraint("CK_EffectivePrices_Amount", "[Amount] > 0");
             t.HasTrigger(EffectivePriceInsertOnlyTrigger);
         });
         builder.HasAlternateKey(p => new { p.Id, p.SkuId });

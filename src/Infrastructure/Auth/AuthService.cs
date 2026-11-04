@@ -1,8 +1,9 @@
+using System.Security.Cryptography;
+using System.Text;
 using CoffeeShop.Application.Auth;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeShop.Infrastructure.Auth;
@@ -11,8 +12,6 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
 {
     private const int MaxEmailLength = 256;
     private const int MaxNameLength = 200;
-    private const int UniqueIndexViolation = 2601;
-    private const int UniqueConstraintViolation = 2627;
 
     public async Task<RegisterResult> RegisterAsync(RegisterCommand command, CancellationToken ct)
     {
@@ -25,6 +24,7 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await LockEmailAsync(command.Email, ct);
 
             var user = new IdentityUser { UserName = command.Email, Email = command.Email };
             var created = await users.CreateAsync(user, command.Password);
@@ -42,7 +42,7 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
 
             return new RegisterResult.Success(customer.Id, command.Email);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: UniqueIndexViolation or UniqueConstraintViolation })
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
         {
             return new RegisterResult.DuplicateEmail();
         }
@@ -55,6 +55,20 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
             return null;
 
         return tokens.Issue(user, await users.GetRolesAsync(user));
+    }
+
+    /// <summary>Serializes registrations of one email: concurrent Identity inserts otherwise deadlock (SQL error 1205).</summary>
+    private async Task LockEmailAsync(string email, CancellationToken ct)
+    {
+        var resource = "register:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(users.NormalizeEmail(email))));
+
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            DECLARE @result int;
+            EXEC @result = sp_getapplock @Resource = {resource}, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+            IF @result < 0 THROW 51001, 'Could not lock the email for registration.', 1;
+            """,
+            ct);
     }
 
     private static RegisterResult ToFailure(IdentityResult result)

@@ -2,14 +2,19 @@ namespace CoffeeShop.Domain.Entities;
 
 public class EffectivePrice
 {
+    private const int MaxDecimals = 2;
+    private const decimal MaxAmountExclusive = 10_000_000_000_000_000m;
+
     private EffectivePrice() { }
 
     public EffectivePrice(int id, int skuId, decimal amount, string currency, DateTimeOffset effectiveFrom)
     {
-        if (amount < 0)
-            throw new InvalidPriceException($"Price amount cannot be negative, got {amount}.");
-        if (currency is not { Length: 3 } || !currency.All(char.IsAsciiLetterUpper))
-            throw new InvalidPriceException($"Currency must be a 3-letter uppercase code, got '{currency}'.");
+        if (amount <= 0)
+            throw new InvalidPriceException($"Price amount must be positive, got {amount}.");
+        if (amount >= MaxAmountExclusive || decimal.Round(amount, MaxDecimals) != amount)
+            throw new InvalidPriceException($"Price amount must have at most 16 integer digits and {MaxDecimals} decimals, got {amount}.");
+        if (!IsoCurrencies.IsValid(currency))
+            throw new InvalidPriceException($"Currency must be an uppercase ISO 4217 code, got '{currency}'.");
 
         Id = id;
         SkuId = skuId;

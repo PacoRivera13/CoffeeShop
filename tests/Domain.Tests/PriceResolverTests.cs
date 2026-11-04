@@ -71,11 +71,18 @@ public class PriceResolverTests
 
     [Theory]
     [InlineData(-0.01, "EUR")]
+    [InlineData(0, "EUR")]
+    [InlineData(1.999, "EUR")]
+    [InlineData(1, "EUX")]
     [InlineData(1, "eur")]
     [InlineData(1, "EURO")]
     [InlineData(1, "")]
     public void Invalid_prices_are_rejected(double amount, string currency) =>
         Assert.Throws<InvalidPriceException>(() => new EffectivePrice(1, 1, (decimal)amount, currency, Jan));
+
+    [Fact]
+    public void Amount_beyond_the_stored_precision_is_rejected() =>
+        Assert.Throws<InvalidPriceException>(() => new EffectivePrice(1, 1, 10_000_000_000_000_000m, "EUR", Jan));
 
     [Theory]
     [InlineData(0, 1)]

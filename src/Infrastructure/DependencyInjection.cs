@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddDbContext<CoffeeShopDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<ICatalogReadStore, CatalogReadStore>();
+        services.AddScoped<IPriceStore, PriceStore>();
         return services;
     }
 

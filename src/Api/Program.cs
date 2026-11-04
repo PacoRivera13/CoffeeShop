@@ -16,6 +16,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<PriceService>();
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default"));
 builder.Services.AddAuthInfrastructure(jwtOptions);
 
@@ -56,5 +57,6 @@ app.UseAuthorization();
 
 app.MapCatalogEndpoints();
 app.MapAuthEndpoints();
+app.MapPriceEndpoints();
 
 await app.RunAsync();

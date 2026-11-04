@@ -222,10 +222,208 @@
           }
         }
       }
+    },
+    "/prices": {
+      "post": {
+        "tags": [
+          "Prices"
+        ],
+        "summary": "Appends a price to a SKU, effective today (UTC) or later. Requires the Admin role.",
+        "operationId": "CreatePrice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceCreatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/skus/{id}/prices": {
+      "get": {
+        "tags": [
+          "Prices"
+        ],
+        "summary": "Returns the full price history of a SKU, latest first. Requires the Admin role.",
+        "operationId": "GetPriceHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PriceHistoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CreatePriceRequest": {
+        "required": [
+          "skuId",
+          "amount",
+          "currency",
+          "effectiveFrom"
+        ],
+        "type": "object",
+        "properties": {
+          "skuId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effectiveFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CurrentUserResponse": {
         "required": [
           "sub",
@@ -337,6 +535,87 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "PriceCreatedResponse": {
+        "required": [
+          "id",
+          "skuId",
+          "amount",
+          "currency",
+          "effectiveFrom"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skuId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PriceHistoryResponse": {
+        "required": [
+          "id",
+          "amount",
+          "currency",
+          "effectiveFrom",
+          "isCurrent"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isCurrent": {
+            "type": "boolean"
           }
         }
       },
@@ -546,6 +825,9 @@
     },
     {
       "name": "Auth"
+    },
+    {
+      "name": "Prices"
     }
   ]
 }

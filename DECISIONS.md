@@ -19,3 +19,10 @@
 - `dotnet ef` uses `CoffeeShopDbContextFactory` so migrations work without JWT settings.
 - `GET /auth/me` is the protected endpoint; `AdminOnly` has no endpoint yet and is tested through `IAuthorizationService`.
 - Login has no lockout or rate limiting yet, and an unknown email skips password hashing, so response time can reveal which emails exist.
+- `POST /prices` answers 400 for missing or malformed fields, including amount and currency, and 422 only for a past `effectiveFrom`.
+- Price amounts must be positive with at most 2 decimals and 16 integer digits; a CHECK enforces `Amount > 0` in the database.
+- Currencies are validated against a fixed ISO 4217 list in Domain, because an append-only typo could not be corrected.
+- `effectiveFrom` uses the same parser as `asOf`, so a value without an offset is UTC, not server local time.
+- `isCurrent` resolves with the current time, like `GET /skus/{id}/price` without `asOf`.
+- A price dated today at an hour already past is accepted and changes the price from that hour; existing orders keep their frozen price.
+- Registration takes an `sp_getapplock` per normalized email inside its transaction, because concurrent Identity inserts for one email deadlocked and returned 500.

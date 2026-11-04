@@ -89,7 +89,7 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
                         {
                             t.HasTrigger("TR_EffectivePrices_InsertOnly");
 
-                            t.HasCheckConstraint("CK_EffectivePrices_Amount", "[Amount] >= 0");
+                            t.HasCheckConstraint("CK_EffectivePrices_Amount", "[Amount] > 0");
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);

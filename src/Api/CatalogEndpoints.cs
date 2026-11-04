@@ -1,18 +1,10 @@
 using System.ComponentModel;
-using System.Globalization;
 using CoffeeShop.Application;
 
 namespace CoffeeShop.Api;
 
 public static class CatalogEndpoints
 {
-    private static readonly string[] AsOfFormats =
-    [
-        "yyyy-MM-dd",
-        "yyyy-MM-ddTHH:mm:ssK",
-        "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
-    ];
-
     public static void MapCatalogEndpoints(this IEndpointRouteBuilder app)
     {
         var catalog = app.MapGroup("").WithTags("Catalog");
@@ -47,7 +39,7 @@ public static class CatalogEndpoints
         CancellationToken ct)
     {
         var instant = clock.GetUtcNow();
-        if (asOf is not null && !TryParseAsOf(asOf, out instant))
+        if (asOf is not null && !IsoDateTime.TryParse(asOf, out instant))
             return Results.Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Invalid asOf",
@@ -62,9 +54,6 @@ public static class CatalogEndpoints
                 detail: $"SKU {id} does not exist.")
             : Results.Ok(new PriceResponse(id, price.Id, price.Amount, price.Currency, price.EffectiveFrom, instant));
     }
-
-    private static bool TryParseAsOf(string value, out DateTimeOffset asOf) =>
-        DateTimeOffset.TryParseExact(value, AsOfFormats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out asOf);
 }
 
 public sealed record ProductResponse(int Id, string Name, string Origin, string Roast, IReadOnlyList<SkuResponse> Skus);

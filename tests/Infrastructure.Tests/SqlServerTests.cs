@@ -149,13 +149,13 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
     }
 
     [SqlServerFact]
-    public async Task Negative_amount_is_rejected_by_the_check_constraint()
+    public async Task Zero_amount_is_rejected_by_the_check_constraint()
     {
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
 
         await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlRawAsync(
-            "INSERT INTO EffectivePrices (SkuId, Amount, Currency, EffectiveFrom) VALUES (1, -1, 'EUR', '2030-01-01T00:00:00+00:00')"));
+            "INSERT INTO EffectivePrices (SkuId, Amount, Currency, EffectiveFrom) VALUES (1, 0, 'EUR', '2030-01-01T00:00:00+00:00')"));
     }
 
     [SqlServerFact]

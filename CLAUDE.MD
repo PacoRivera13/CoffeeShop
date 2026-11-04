@@ -20,6 +20,9 @@ Customer, Order(status), OrderLine(unit_price_snapshot, price_id), Inventory(pro
 - Inventario en gramos por producto; cada línea descuenta size_g * qty.
 - Outbox transaccional; consumidores idempotentes. Bus detrás de IMessageBus.
 - Storage detrás de IFileStorage (MinIO ahora, S3 después).
+- Roles: Admin y Customer; política AdminOnly (rol Admin) en los endpoints de administración.
+- Precios solo INSERT, sin PUT ni DELETE: duplicado (sku_id, effective_from) -> 409 desde el índice único; effective_from anterior a hoy (UTC) -> 422.
+- Tests de integración con Testcontainers.MsSql (requieren Docker) y un único fixture compartido.
 
 ## Trabajo (ahorro de tokens)
 - No expliques el código ni muestres archivos completos; resume cambios en máx. 5 líneas.
