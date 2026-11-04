@@ -1,9 +1,12 @@
 using CoffeeShop.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeShop.Infrastructure.Persistence;
 
-public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options) : DbContext(options)
+public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options)
+    : IdentityDbContext<IdentityUser, IdentityRole, string>(options)
 {
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Sku> Skus => Set<Sku>();
@@ -13,8 +16,11 @@ public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options) 
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Inventory> Inventories => Set<Inventory>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoffeeShopDbContext).Assembly);
+    }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {

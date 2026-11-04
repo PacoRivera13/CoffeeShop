@@ -11,13 +11,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CoffeeShop.Api.Tests;
 
-public class CatalogEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public class CatalogEndpointsTests : IClassFixture<TestApiFactory>
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 2, 12, 0, 0, TimeSpan.Zero);
 
     private readonly HttpClient _client;
 
-    public CatalogEndpointsTests(WebApplicationFactory<Program> factory)
+    public CatalogEndpointsTests(TestApiFactory factory)
     {
         _client = factory.WithWebHostBuilder(host => host.ConfigureTestServices(services =>
         {

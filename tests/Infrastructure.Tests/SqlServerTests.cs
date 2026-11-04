@@ -1,6 +1,7 @@
 using CoffeeShop.Application;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -174,7 +175,10 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
         await using var transaction = await db.Database.BeginTransactionAsync();
 
-        var customer = new Customer(0, "Test", "test@example.test");
+        var user = new IdentityUser { UserName = "test@example.test", Email = "test@example.test" };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        var customer = new Customer(0, "Test", "test@example.test", user.Id);
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
         var order = new Order(0, customer.Id, Jun);

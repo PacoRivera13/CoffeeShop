@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace CoffeeShop.Api.Tests;
 
-public class OpenApiDocumentTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class OpenApiDocumentTests(TestApiFactory factory) : IClassFixture<TestApiFactory>
 {
     private const string DocumentUrl = "/openapi/v1.json";
 

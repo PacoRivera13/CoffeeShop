@@ -1,5 +1,5 @@
 # Decisions
-- Local verification uses LocalDB because Docker is not installed; `docker-compose.yml` has not been run.
+- Local verification uses LocalDB; auth tests use Testcontainers and need Docker running; `docker-compose.yml` has not been run.
 - IDs are `int` identity columns, with fixed values in the seed.
 - `asOf` accepts ISO 8601 only and is read as UTC when it has no offset; it defaults to the current time.
 - A SKU with no effective price returns 404 with its own title, distinct from an unknown SKU.
@@ -12,3 +12,10 @@
 - SQL Server tests use a temporary LocalDB database on Windows; other platforms need `COFFEESHOP_TEST_SQLSERVER` or they report as skipped.
 - API docs use the official `Microsoft.AspNetCore.OpenApi` generator with Swashbuckle SwaggerUI, and are exposed in Development only.
 - Root `openapi.json` is a snapshot without `servers`, kept in sync by a test; regenerate with `UPDATE_OPENAPI=1 dotnet test --filter Committed_document`.
+- `IdentityUser` uses string keys; `sub` is the Identity user id and `UserName` equals the email, whose unique index resolves concurrent registrations as 409.
+- Roles are seeded by migration; the Admin user has no `Customer` row and an existing Admin keeps its password when the seed runs again.
+- Passwords follow Identity defaults with a minimum length of 8.
+- `Jwt__Key` is empty in `.env.example` so an unedited copy fails at startup; ASP.NET does not read `.env`, so use env vars or user-secrets.
+- `dotnet ef` uses `CoffeeShopDbContextFactory` so migrations work without JWT settings.
+- `GET /auth/me` is the protected endpoint; `AdminOnly` has no endpoint yet and is tested through `IAuthorizationService`.
+- Login has no lockout or rate limiting yet, and an unknown email skips password hashing, so response time can reveal which emails exist.

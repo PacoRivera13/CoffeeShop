@@ -1,4 +1,6 @@
+using CoffeeShop.Application.Auth;
 using CoffeeShop.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,7 +13,26 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
         builder.Property(c => c.Email).HasMaxLength(320).IsRequired();
         builder.HasIndex(c => c.Email).IsUnique();
+        builder.HasOne<IdentityUser>().WithOne().HasForeignKey<Customer>(c => c.IdentityUserId).OnDelete(DeleteBehavior.Restrict);
     }
+}
+
+internal sealed class RoleConfiguration : IEntityTypeConfiguration<IdentityRole>
+{
+    public void Configure(EntityTypeBuilder<IdentityRole> builder) =>
+        builder.HasData(
+            new IdentityRole(AppRoles.Admin)
+            {
+                Id = "0f6d2c1e-6a3b-4c58-9d17-3b1f0a7e2c01",
+                NormalizedName = "ADMIN",
+                ConcurrencyStamp = "5b7a9e44-1c2d-4f60-8a3e-7d9c2b6f1a11",
+            },
+            new IdentityRole(AppRoles.Customer)
+            {
+                Id = "a84e7b92-2d15-4e6f-b0c3-6e2d9f4a1c02",
+                NormalizedName = "CUSTOMER",
+                ConcurrencyStamp = "c2e8d3f7-4b1a-49d6-9f25-1a6b8e3c7d22",
+            });
 }
 
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
