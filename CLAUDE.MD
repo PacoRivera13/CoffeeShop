@@ -30,3 +30,4 @@ Customer, Order(status), OrderLine(unit_price_snapshot, price_id), Inventory(pro
 - Build/test en modo silencioso (`dotnet build -v q`, `dotnet test --nologo -v q`); muestra solo fallos.
 - Ante ambigüedad menor, decide y anótalo en DECISIONS.md (1 línea); no preguntes.
 - Un milestone por vez. Commit convencional al terminar.
+- Antes de cada push: code review (nivel high) de los commits sin publicar; corrige los hallazgos confirmados, vuelve a pasar los tests y commitea antes de publicar.
