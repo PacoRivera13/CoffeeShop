@@ -132,6 +132,10 @@ public static class OrderEndpoints
     {
         OrderActionResult.Done done => Results.Ok(ToResponse(done.Order)),
         OrderActionResult.NotFound => OrderNotFound(id),
+        OrderActionResult.Conflict => Results.Problem(
+            statusCode: StatusCodes.Status409Conflict,
+            title: "Order changed concurrently",
+            detail: $"Order {id} kept changing while it was being updated; retry the request."),
         _ => throw new InvalidOperationException($"Unexpected result {result.GetType().Name}."),
     };
 

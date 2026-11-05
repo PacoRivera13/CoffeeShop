@@ -14,7 +14,7 @@ public class OrderEndpointsTests(MsSqlFixture fixture)
     private const decimal Price500 = 10m;
     private const decimal Price1000 = 18m;
 
-    private static readonly DateTimeOffset Today = new(DateTime.UtcNow.Date, TimeSpan.Zero);
+    private static DateTimeOffset Today => new(DateTime.UtcNow.Date, TimeSpan.Zero);
 
     private sealed record TestProduct(int ProductId, int Sku500, int Sku1000);
 
@@ -231,6 +231,33 @@ public class OrderEndpointsTests(MsSqlFixture fixture)
         var inventory = await InventoryOfAsync(product.ProductId);
         Assert.Equal(20_000 - 1_000, inventory.StockG);
         Assert.Single(inventory.Movements, m => m.Reason == MovementReason.Reserve);
+    }
+
+    [Fact]
+    public async Task Retry_with_an_invalid_body_still_returns_the_original_order()
+    {
+        var product = await NewProductAsync();
+        var customer = await fixture.NewCustomerClientAsync();
+        var key = Guid.NewGuid().ToString();
+        var original = await PlaceOkAsync(customer, Body((product.Sku500, 1)), key);
+
+        var retry = await PlaceAsync(customer, Body((product.Sku500, 51)), key);
+
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+        Assert.Equal(original.Id, (await retry.Content.ReadFromJsonAsync<OrderResponse>())!.Id);
+    }
+
+    [Fact]
+    public async Task Page_beyond_the_last_is_empty()
+    {
+        var product = await NewProductAsync();
+        var customer = await fixture.NewCustomerClientAsync();
+        await PlaceOkAsync(customer, Body((product.Sku500, 1)));
+
+        var page = await customer.GetFromJsonAsync<OrderPageResponse>($"/orders?page={int.MaxValue}&pageSize=100");
+
+        Assert.Empty(page!.Items);
+        Assert.Equal(1, page.TotalCount);
     }
 
     [Fact]

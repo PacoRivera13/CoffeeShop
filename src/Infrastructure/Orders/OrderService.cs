@@ -13,7 +13,19 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
     public async Task<CreateOrderResult> CreateAsync(
         string userId, IReadOnlyList<OrderItem> items, string? idempotencyKey, CancellationToken ct)
     {
-        if (Validate(items, idempotencyKey) is { } error)
+        if (idempotencyKey is not null
+            && (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > OrderConstraints.MaxIdempotencyKeyLength))
+            return new CreateOrderResult.Invalid(
+                $"Idempotency-Key must have between 1 and {OrderConstraints.MaxIdempotencyKeyLength} characters.");
+
+        if (await FindCustomerIdAsync(userId, ct) is not { } customerId)
+            return new CreateOrderResult.CustomerNotFound();
+
+        // A retry returns the original order even if its body would no longer validate.
+        if (idempotencyKey is not null && await FindByKeyAsync(customerId, idempotencyKey, ct) is { } existing)
+            return new CreateOrderResult.Replayed(existing);
+
+        if (Validate(items) is { } error)
             return new CreateOrderResult.Invalid(error);
 
         var merged = items.GroupBy(i => i.SkuId)
@@ -23,12 +35,6 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
         if (merged.FirstOrDefault(i => i.Qty > OrderConstraints.MaxQty) is { } tooMany)
             return new CreateOrderResult.Invalid(
                 $"SKU {tooMany.SkuId} adds up to {tooMany.Qty} units; the maximum per SKU is {OrderConstraints.MaxQty}.");
-
-        if (await FindCustomerIdAsync(userId, ct) is not { } customerId)
-            return new CreateOrderResult.CustomerNotFound();
-
-        if (idempotencyKey is not null && await FindByKeyAsync(customerId, idempotencyKey, ct) is { } existing)
-            return new CreateOrderResult.Replayed(existing);
 
         var skuIds = merged.Select(i => i.SkuId).ToList();
         var skus = await db.Skus.AsNoTracking().Where(s => skuIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
@@ -130,13 +136,20 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
             return new OrderPage([], page, pageSize, 0);
 
         var own = db.Orders.AsNoTracking().Where(o => o.CustomerId == customerId);
+        var totalCount = await own.CountAsync(ct);
+
+        // Computed in long: a huge page number would otherwise overflow into a negative OFFSET.
+        var skip = (long)(page - 1) * pageSize;
+        if (skip >= totalCount)
+            return new OrderPage([], page, pageSize, totalCount);
+
         var items = await own.Include(o => o.Lines)
             .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Skip((int)skip).Take(pageSize)
             .AsSplitQuery()
             .ToListAsync(ct);
 
-        return new OrderPage(items, page, pageSize, await own.CountAsync(ct));
+        return new OrderPage(items, page, pageSize, totalCount);
     }
 
     /// <summary>
@@ -170,25 +183,29 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
                     await transaction.CommitAsync(ct);
                     return new OrderActionResult.Done(order);
                 }
-                catch (DbUpdateConcurrencyException) when (attempt < MaxConcurrencyAttempts)
+                catch (DbUpdateConcurrencyException)
                 {
                     // The transaction rolls back on dispose, undoing any stock released in this attempt.
+                    if (attempt == MaxConcurrencyAttempts)
+                        return new OrderActionResult.Conflict();
                 }
             }
         });
     }
 
+    /// <summary>Releases exactly what the order's movements still hold, so stock always matches the ledger.</summary>
     private async Task ReleaseStockAsync(Order order, CancellationToken ct)
     {
-        var skuIds = order.Lines.Select(l => l.SkuId).ToList();
-        var skus = await db.Skus.AsNoTracking().Where(s => skuIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
-        var gramsByProduct = order.Lines
-            .GroupBy(l => skus[l.SkuId].ProductId)
-            .Select(g => (ProductId: g.Key, Grams: g.Sum(l => skus[l.SkuId].SizeG * l.Qty)))
-            .OrderBy(p => p.ProductId);
+        var heldByProduct = await db.InventoryMovements
+            .Where(m => m.OrderId == order.Id)
+            .GroupBy(m => m.ProductId)
+            .Select(g => new { ProductId = g.Key, Grams = -g.Sum(m => m.DeltaG) })
+            .Where(p => p.Grams > 0)
+            .OrderBy(p => p.ProductId)
+            .ToListAsync(ct);
         var now = clock.GetUtcNow();
 
-        foreach (var (productId, grams) in gramsByProduct)
+        foreach (var (productId, grams) in heldByProduct.Select(p => (p.ProductId, p.Grams)))
         {
             var released = await db.Inventories
                 .Where(i => i.ProductId == productId)
@@ -207,15 +224,12 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
         db.Orders.AsNoTracking().Include(o => o.Lines)
             .SingleOrDefaultAsync(o => o.CustomerId == customerId && o.IdempotencyKey == idempotencyKey, ct);
 
-    private static string? Validate(IReadOnlyList<OrderItem> items, string? idempotencyKey)
+    private static string? Validate(IReadOnlyList<OrderItem> items)
     {
         if (items.Count is 0 or > OrderConstraints.MaxLines)
             return $"items must have between 1 and {OrderConstraints.MaxLines} lines.";
         if (items.Any(i => i.Qty is < 1 or > OrderConstraints.MaxQty))
             return $"qty must be between 1 and {OrderConstraints.MaxQty}.";
-        if (idempotencyKey is not null
-            && (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > OrderConstraints.MaxIdempotencyKeyLength))
-            return $"Idempotency-Key must have between 1 and {OrderConstraints.MaxIdempotencyKeyLength} characters.";
 
         return null;
     }

@@ -35,6 +35,9 @@ public abstract record OrderActionResult
     public sealed record Done(Order Order) : OrderActionResult;
 
     public sealed record NotFound : OrderActionResult;
+
+    /// <summary>The order kept changing concurrently; nothing was applied.</summary>
+    public sealed record Conflict : OrderActionResult;
 }
 
 public sealed record OrderPage(IReadOnlyList<Order> Items, int Page, int PageSize, int TotalCount);

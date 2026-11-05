@@ -35,3 +35,4 @@
 - Inventory is seeded by migration SQL for products without a row, with a Restock movement, so stock always equals the sum of movements.
 - `InventoryMovements` are insert-only, enforced in `SaveChanges` and by a database trigger, like prices.
 - `POST /orders` needs the Customer role (`CustomerOnly` policy); `GET /orders/{id}` also allows Admin; pay and cancel are owner-only.
+- Code review runs before every push (one review per milestone), not after a fixed count of changes; a push is the natural checkpoint.

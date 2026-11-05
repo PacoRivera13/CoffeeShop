@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Persistence;
@@ -10,11 +9,10 @@ namespace CoffeeShop.Api.Tests;
 [Collection(MsSqlCollection.Name)]
 public class PriceEndpointsTests(MsSqlFixture fixture)
 {
-    private const string CustomerPassword = "Str0ng!Passw0rd";
     private const decimal InitialAmount = 10m;
 
-    private static readonly DateTimeOffset Today = new(DateTime.UtcNow.Date, TimeSpan.Zero);
-    private static readonly DateTimeOffset Tomorrow = Today.AddDays(1);
+    private static DateTimeOffset Today => new(DateTime.UtcNow.Date, TimeSpan.Zero);
+    private static DateTimeOffset Tomorrow => Today.AddDays(1);
 
     private readonly HttpClient _anonymous = fixture.Factory.CreateClient();
 
@@ -43,27 +41,6 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
         return sku.Id;
     }
 
-    private async Task<HttpClient> AdminClientAsync() => await ClientForAsync(fixture.AdminEmail, fixture.AdminPassword);
-
-    private async Task<HttpClient> CustomerClientAsync()
-    {
-        var email = $"{Guid.NewGuid():N}@example.test";
-        var registered = await _anonymous.PostAsJsonAsync("/auth/register", new RegisterRequest(email, CustomerPassword, "Test"));
-        Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
-        return await ClientForAsync(email, CustomerPassword);
-    }
-
-    private async Task<HttpClient> ClientForAsync(string email, string password)
-    {
-        var login = await _anonymous.PostAsJsonAsync("/auth/login", new LoginRequest(email, password));
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
-
-        var client = fixture.Factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        return client;
-    }
-
     private static Task<HttpResponseMessage> PostPrice(HttpClient client, int skuId, decimal amount, DateTimeOffset effectiveFrom) =>
         client.PostAsJsonAsync("/prices", new CreatePriceRequest(skuId, amount, "EUR", Iso(effectiveFrom)));
 
@@ -84,7 +61,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [Fact]
     public async Task Creating_a_price_as_customer_is_forbidden()
     {
-        var response = await PostPrice(await CustomerClientAsync(), 1, 5m, Tomorrow);
+        var response = await PostPrice(await fixture.NewCustomerClientAsync(), 1, 5m, Tomorrow);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -94,7 +71,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     {
         var skuId = await NewSkuAsync();
 
-        var response = await PostPrice(await AdminClientAsync(), skuId, 12.50m, Tomorrow);
+        var response = await PostPrice(await fixture.AdminClientAsync(), skuId, 12.50m, Tomorrow);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await response.Content.ReadFromJsonAsync<PriceCreatedResponse>();
@@ -109,7 +86,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task Duplicate_sku_and_date_is_a_conflict()
     {
         var skuId = await NewSkuAsync();
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
         await PostPrice(admin, skuId, 12m, Tomorrow);
 
         var response = await PostPrice(admin, skuId, 13m, Tomorrow);
@@ -121,7 +98,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task Same_instant_with_another_offset_is_a_conflict()
     {
         var skuId = await NewSkuAsync();
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
         await PostPrice(admin, skuId, 12m, Tomorrow);
 
         var response = await PostPrice(admin, skuId, 13m, Tomorrow.ToOffset(TimeSpan.FromHours(2)));
@@ -133,7 +110,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task Simultaneous_duplicates_create_one_price()
     {
         var skuId = await NewSkuAsync();
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 5).Select(i => PostPrice(admin, skuId, 12m + i, Tomorrow)));
 
@@ -147,7 +124,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     {
         var skuId = await NewSkuAsync();
 
-        var response = await PostPrice(await AdminClientAsync(), skuId, 12m, Today.AddSeconds(-1));
+        var response = await PostPrice(await fixture.AdminClientAsync(), skuId, 12m, Today.AddSeconds(-1));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
@@ -157,7 +134,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     {
         var skuId = await NewSkuAsync();
 
-        var response = await PostPrice(await AdminClientAsync(), skuId, 12m, Today);
+        var response = await PostPrice(await fixture.AdminClientAsync(), skuId, 12m, Today);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
@@ -165,7 +142,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [Fact]
     public async Task Unknown_sku_is_not_found()
     {
-        var response = await PostPrice(await AdminClientAsync(), 999_999, 12m, Tomorrow);
+        var response = await PostPrice(await fixture.AdminClientAsync(), 999_999, 12m, Tomorrow);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -181,7 +158,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task Invalid_amount_or_currency_is_bad_request(double amount, string currency)
     {
         var skuId = await NewSkuAsync();
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         var response = await admin.PostAsJsonAsync("/prices", new CreatePriceRequest(skuId, (decimal)amount, currency, Iso(Tomorrow)));
 
@@ -197,7 +174,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [InlineData(1, 1, "EUR", "01/02/2099")]
     public async Task Missing_or_malformed_fields_are_bad_request(int? skuId, int? amount, string? currency, string? effectiveFrom)
     {
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         var response = await admin.PostAsJsonAsync("/prices", new CreatePriceRequest(skuId, amount, currency, effectiveFrom));
 
@@ -209,7 +186,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     {
         var skuId = await NewSkuAsync();
 
-        await PostPrice(await AdminClientAsync(), skuId, 20m, Tomorrow);
+        await PostPrice(await fixture.AdminClientAsync(), skuId, 20m, Tomorrow);
 
         Assert.Equal(InitialAmount, await GetPriceAsync(skuId));
         Assert.Equal(20m, await GetPriceAsync(skuId, Tomorrow));
@@ -219,7 +196,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task History_is_ordered_latest_first_and_marks_the_current_price()
     {
         var skuId = await NewSkuAsync();
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
         await PostPrice(admin, skuId, 40m, Tomorrow.AddDays(10));
         await PostPrice(admin, skuId, 20m, Today);
         await PostPrice(admin, skuId, 30m, Tomorrow);
@@ -235,7 +212,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task History_has_no_current_price_when_none_applies_yet()
     {
         var skuId = await NewSkuAsync(withInitialPrice: false);
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
         await PostPrice(admin, skuId, 20m, Tomorrow);
 
         var history = await admin.GetFromJsonAsync<PriceHistoryResponse[]>($"/skus/{skuId}/prices");
@@ -247,7 +224,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     public async Task History_of_a_sku_without_prices_is_empty()
     {
         var skuId = await NewSkuAsync(withInitialPrice: false);
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         Assert.Empty((await admin.GetFromJsonAsync<PriceHistoryResponse[]>($"/skus/{skuId}/prices"))!);
     }
@@ -255,7 +232,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [Fact]
     public async Task History_requires_the_admin_role()
     {
-        var customer = await CustomerClientAsync();
+        var customer = await fixture.NewCustomerClientAsync();
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await _anonymous.GetAsync("/skus/1/prices")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await customer.GetAsync("/skus/1/prices")).StatusCode);
@@ -264,7 +241,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [Fact]
     public async Task History_of_an_unknown_sku_is_not_found()
     {
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/skus/999999/prices")).StatusCode);
     }
@@ -278,7 +255,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [Fact]
     public async Task Prices_cannot_be_updated_or_deleted()
     {
-        var admin = await AdminClientAsync();
+        var admin = await fixture.AdminClientAsync();
 
         Assert.Equal(HttpStatusCode.MethodNotAllowed, (await admin.PutAsJsonAsync("/prices", new { })).StatusCode);
         Assert.Equal(HttpStatusCode.MethodNotAllowed, (await admin.DeleteAsync("/prices")).StatusCode);
