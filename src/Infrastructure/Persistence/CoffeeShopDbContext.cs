@@ -1,4 +1,5 @@
 using CoffeeShop.Domain.Entities;
+using CoffeeShop.Infrastructure.Messaging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,8 @@ public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options)
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Inventory> Inventories => Set<Inventory>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

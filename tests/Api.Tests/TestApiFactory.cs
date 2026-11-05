@@ -18,5 +18,6 @@ public class TestApiFactory : WebApplicationFactory<Program>
             .UseSetting("Jwt:Issuer", "coffeeshop-tests")
             .UseSetting("Jwt:Audience", "coffeeshop-tests")
             .UseSetting("Admin:Email", string.Empty)
-            .UseSetting("Admin:Password", string.Empty);
+            .UseSetting("Admin:Password", string.Empty)
+            .UseSetting("Outbox:Enabled", "false");
 }

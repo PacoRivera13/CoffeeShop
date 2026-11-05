@@ -5,43 +5,15 @@ using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using static CoffeeShop.Api.Tests.OrderTestHelpers;
 
 namespace CoffeeShop.Api.Tests;
 
 [Collection(MsSqlCollection.Name)]
 public class OrderEndpointsTests(MsSqlFixture fixture)
 {
-    private const decimal Price500 = 10m;
-    private const decimal Price1000 = 18m;
-
-    private static DateTimeOffset Today => new(DateTime.UtcNow.Date, TimeSpan.Zero);
-
-    private sealed record TestProduct(int ProductId, int Sku500, int Sku1000);
-
-    /// <summary>Rows cannot be deleted and the database is shared, so every test orders its own product.</summary>
-    private async Task<TestProduct> NewProductAsync(int stockG = 20_000, string currency = "EUR")
-    {
-        using var scope = fixture.Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
-
-        var product = new Product(0, "Order test", "Test origin", "Dark");
-        db.Products.Add(product);
-        await db.SaveChangesAsync();
-
-        var sku500 = new Sku(0, product.Id, Grind.WholeBean, 500);
-        var sku1000 = new Sku(0, product.Id, Grind.WholeBean, 1000);
-        db.Skus.AddRange(sku500, sku1000);
-        db.Inventories.Add(new Inventory(product.Id, stockG));
-        db.InventoryMovements.Add(InventoryMovement.Restock(product.Id, stockG, Today.AddDays(-30)));
-        await db.SaveChangesAsync();
-
-        db.EffectivePrices.AddRange(
-            new EffectivePrice(0, sku500.Id, Price500, currency, Today.AddDays(-30)),
-            new EffectivePrice(0, sku1000.Id, Price1000, currency, Today.AddDays(-30)));
-        await db.SaveChangesAsync();
-
-        return new TestProduct(product.Id, sku500.Id, sku1000.Id);
-    }
+    private Task<TestProduct> NewProductAsync(int stockG = 20_000, string currency = "EUR") =>
+        fixture.NewProductAsync(stockG, currency);
 
     private async Task<(int StockG, int MovementSum, List<InventoryMovement> Movements)> InventoryOfAsync(int productId)
     {
@@ -51,24 +23,6 @@ public class OrderEndpointsTests(MsSqlFixture fixture)
         var stock = await db.Inventories.Where(i => i.ProductId == productId).Select(i => i.StockG).SingleAsync();
         var movements = await db.InventoryMovements.Where(m => m.ProductId == productId).OrderBy(m => m.Id).ToListAsync();
         return (stock, movements.Sum(m => m.DeltaG), movements);
-    }
-
-    private static object Body(params (int SkuId, int Qty)[] items) =>
-        new { items = items.Select(i => new { skuId = i.SkuId, qty = i.Qty }) };
-
-    private static Task<HttpResponseMessage> PlaceAsync(HttpClient client, object body, string? idempotencyKey = null)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/orders") { Content = JsonContent.Create(body) };
-        if (idempotencyKey is not null)
-            request.Headers.Add("Idempotency-Key", idempotencyKey);
-        return client.SendAsync(request);
-    }
-
-    private static async Task<OrderResponse> PlaceOkAsync(HttpClient client, object body, string? idempotencyKey = null)
-    {
-        var response = await PlaceAsync(client, body, idempotencyKey);
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.Content.ReadFromJsonAsync<OrderResponse>())!;
     }
 
     [Fact]

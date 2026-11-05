@@ -36,3 +36,9 @@
 - `InventoryMovements` are insert-only, enforced in `SaveChanges` and by a database trigger, like prices.
 - `POST /orders` needs the Customer role (`CustomerOnly` policy); `GET /orders/{id}` also allows Admin; pay and cancel are owner-only.
 - Code review runs before every push (one review per milestone), not after a fixed count of changes; a push is the natural checkpoint.
+- Outbox claims set NextAttemptAt to now + 5 min (a lease) in one UPDLOCK/READPAST statement; a crashed dispatcher's claims reappear after it.
+- Retry backoff is 2s * 2^(attempts-1), capped at 5 min; a message is Failed once Attempts reaches Outbox:MaxAttempts.
+- Messages travel as an envelope with a stable type name ("OrderCreated") and a JSON payload, so an SQS adapter can carry them unchanged.
+- Each handler runs in its own transaction and writes its ProcessedMessage row first, so a concurrent duplicate waits and then skips.
+- External side effects such as emails stay at-least-once: a crash after the handler but before commit runs it again.
+- No outbox row is written for no-ops (paying a paid order, cancelling a cancelled one, idempotent replays).

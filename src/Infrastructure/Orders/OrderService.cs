@@ -1,4 +1,6 @@
+using CoffeeShop.Application.Messaging;
 using CoffeeShop.Application.Orders;
+using CoffeeShop.Infrastructure.Messaging;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Domain.Pricing;
 using CoffeeShop.Infrastructure.Persistence;
@@ -95,6 +97,7 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
 
             db.InventoryMovements.AddRange(
                 gramsByProduct.Select(p => InventoryMovement.Reserve(p.ProductId, p.Grams, order.Id, now)));
+            AddToOutbox(new OrderCreated(order.Id, order.CustomerId, order.Total, order.Currency, now), now);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 
@@ -105,7 +108,12 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
     public Task<OrderActionResult> PayAsync(string userId, int orderId, CancellationToken ct) =>
         ChangeOwnOrderAsync(userId, orderId, order =>
         {
-            order.Pay();
+            if (order.Pay())
+            {
+                var now = clock.GetUtcNow();
+                AddToOutbox(new OrderPaid(order.Id, order.CustomerId, order.Total, order.Currency, now), now);
+            }
+
             return Task.CompletedTask;
         }, ct);
 
@@ -113,8 +121,16 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
         ChangeOwnOrderAsync(userId, orderId, async order =>
         {
             if (order.Cancel())
+            {
                 await ReleaseStockAsync(order, ct);
+                var now = clock.GetUtcNow();
+                AddToOutbox(new OrderCancelled(order.Id, order.CustomerId, order.Total, order.Currency, now), now);
+            }
         }, ct);
+
+    /// <summary>Stages the message in the current unit of work, so it commits or rolls back with the state change.</summary>
+    private void AddToOutbox<TMessage>(TMessage message, DateTimeOffset occurredAt) where TMessage : notnull =>
+        db.OutboxMessages.Add(OutboxMessage.For(message, occurredAt));
 
     public async Task<Order?> GetAsync(string userId, bool isAdmin, int orderId, CancellationToken ct)
     {

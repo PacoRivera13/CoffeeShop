@@ -19,6 +19,7 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PriceService>();
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default"));
 builder.Services.AddAuthInfrastructure(jwtOptions);
+builder.Services.AddMessaging(builder.Configuration);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

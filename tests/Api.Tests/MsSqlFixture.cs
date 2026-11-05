@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MsSql;
 
@@ -42,6 +43,7 @@ public sealed class MsSqlFixture : IAsyncLifetime
         new TestApiFactory().WithWebHostBuilder(host =>
         {
             host.UseSetting("ConnectionStrings:Default", _container.GetConnectionString());
+            host.ConfigureTestServices(OutboxTestDoubles.Register);
             foreach (var (key, value) in settings)
                 host.UseSetting(key, value);
         });
