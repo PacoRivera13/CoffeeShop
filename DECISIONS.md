@@ -42,3 +42,4 @@
 - Each handler runs in its own transaction and writes its ProcessedMessage row first, so a concurrent duplicate waits and then skips.
 - External side effects such as emails stay at-least-once: a crash after the handler but before commit runs it again.
 - No outbox row is written for no-ops (paying a paid order, cancelling a cancelled one, idempotent replays).
+- Done outbox rows and ProcessedMessage markers are kept for now; a retention job is a follow-up once volumes matter.

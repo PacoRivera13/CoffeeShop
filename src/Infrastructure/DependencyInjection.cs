@@ -43,7 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IMessageHandler<OrderPaid>, NotificationHandler>();
         services.AddScoped<IMessageHandler<OrderCancelled>, NotificationHandler>();
 
-        if (section.GetValue(nameof(OutboxOptions.Enabled), defaultValue: true))
+        if ((section.Get<OutboxOptions>() ?? new OutboxOptions()).Enabled)
             services.AddHostedService<OutboxHostedService>();
 
         return services;

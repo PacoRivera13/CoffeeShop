@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using static CoffeeShop.Api.Tests.OrderTestHelpers;
 
 namespace CoffeeShop.Api.Tests;
 
@@ -11,7 +12,6 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
 {
     private const decimal InitialAmount = 10m;
 
-    private static DateTimeOffset Today => new(DateTime.UtcNow.Date, TimeSpan.Zero);
     private static DateTimeOffset Tomorrow => Today.AddDays(1);
 
     private readonly HttpClient _anonymous = fixture.Factory.CreateClient();

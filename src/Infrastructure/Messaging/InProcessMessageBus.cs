@@ -26,11 +26,16 @@ internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvi
         return (Task)deliver.Invoke(this, [message, new MessageContext(envelope.MessageId), ct])!;
     }
 
+    // Registrations are fixed once the container is built, so the handler types per message type are looked up once.
+    private readonly ConcurrentDictionary<Type, Type[]> _handlerTypes = new();
+
     private async Task DeliverAsync<TMessage>(TMessage message, MessageContext context, CancellationToken ct)
     {
-        List<Type> handlerTypes;
-        using (var scope = scopes.CreateScope())
-            handlerTypes = scope.ServiceProvider.GetServices<IMessageHandler<TMessage>>().Select(h => h.GetType()).ToList();
+        var handlerTypes = _handlerTypes.GetOrAdd(typeof(TMessage), _ =>
+        {
+            using var scope = scopes.CreateScope();
+            return scope.ServiceProvider.GetServices<IMessageHandler<TMessage>>().Select(h => h.GetType()).ToArray();
+        });
 
         foreach (var handlerType in handlerTypes)
             await InvokeOnceAsync(handlerType, message, context, ct);

@@ -41,7 +41,17 @@ public sealed class OutboxDispatcher(
         var claimed = await ClaimAsync(settings.BatchSize, ct);
 
         foreach (var message in claimed)
-            await DeliverAsync(message, settings.MaxAttempts, ct);
+        {
+            try
+            {
+                await DeliverAsync(message, settings.MaxAttempts, ct);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                // Recording the outcome failed; the message reappears when its lease expires. Keep the rest of the batch going.
+                logger.LogError(ex, "Could not record the outcome of outbox message {MessageId}", message.Id);
+            }
+        }
 
         return claimed.Count;
     }
@@ -93,18 +103,35 @@ public sealed class OutboxDispatcher(
             logger.LogWarning(ex, "Outbox message {MessageId} ({MessageType}) failed attempt {Attempt} of {MaxAttempts}",
                 message.Id, message.Type, attempts, maxAttempts);
 
-            await db.OutboxMessages.Where(m => m.Id == message.Id).ExecuteUpdateAsync(s => s
+            var failedRows = await StillClaimed(db, message).ExecuteUpdateAsync(s => s
                 .SetProperty(m => m.Attempts, attempts)
                 .SetProperty(m => m.Status, status)
                 .SetProperty(m => m.NextAttemptAt, now + BackoffAfter(attempts))
                 .SetProperty(m => m.LastError, error), ct);
+            WarnIfClaimLost(failedRows, message);
             return;
         }
 
         var processedAt = clock.GetUtcNow();
-        await db.OutboxMessages.Where(m => m.Id == message.Id).ExecuteUpdateAsync(s => s
+        var doneRows = await StillClaimed(db, message).ExecuteUpdateAsync(s => s
             .SetProperty(m => m.Attempts, attempts)
             .SetProperty(m => m.Status, OutboxStatus.Done)
             .SetProperty(m => m.ProcessedAt, processedAt), ct);
+        WarnIfClaimLost(doneRows, message);
+    }
+
+    /// <summary>
+    /// Matches the row only while it still carries this claim's lease. If the lease expired and another dispatcher
+    /// reclaimed the message, that dispatcher owns the outcome and this stale one must not overwrite it.
+    /// </summary>
+    private static IQueryable<OutboxMessage> StillClaimed(CoffeeShopDbContext db, OutboxMessage claimed) =>
+        db.OutboxMessages.Where(m =>
+            m.Id == claimed.Id && m.Status == OutboxStatus.Pending && m.NextAttemptAt == claimed.NextAttemptAt);
+
+    private void WarnIfClaimLost(int updatedRows, OutboxMessage message)
+    {
+        if (updatedRows == 0)
+            logger.LogWarning("Outbox message {MessageId} was reclaimed after its lease expired; its outcome was left to the new claim",
+                message.Id);
     }
 }

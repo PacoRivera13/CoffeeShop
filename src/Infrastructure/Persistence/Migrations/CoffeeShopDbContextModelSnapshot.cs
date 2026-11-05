@@ -558,8 +558,14 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("Id"), false);
+
                     b.HasIndex("NextAttemptAt")
                         .HasFilter("[Status] = 'Pending'");
+
+                    b.HasIndex("OccurredAt");
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("OccurredAt"));
 
                     b.ToTable("OutboxMessages");
                 });

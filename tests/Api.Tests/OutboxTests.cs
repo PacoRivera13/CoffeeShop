@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.Json;
 using CoffeeShop.Application.Messaging;
+using CoffeeShop.Infrastructure;
 using CoffeeShop.Infrastructure.Messaging;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -226,13 +228,20 @@ public class OutboxTests(MsSqlFixture fixture)
         Assert.Equal(before, await OutboxCountAsync());
     }
 
-    [Fact]
-    public async Task Polling_loop_runs_only_when_enabled()
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    public void Polling_loop_is_registered_only_when_enabled(string? enabled, bool expected)
     {
-        await using var enabled = fixture.CreateFactory(("Outbox:Enabled", "true"));
+        // Checked on the registrations, so no real polling loop runs against the shared database.
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(enabled is null ? [] : [new KeyValuePair<string, string?>("Outbox:Enabled", enabled)])
+            .Build();
 
-        Assert.Single(enabled.Services.GetServices<IHostedService>().OfType<OutboxHostedService>());
-        Assert.Empty(fixture.Factory.Services.GetServices<IHostedService>().OfType<OutboxHostedService>());
+        var services = new ServiceCollection().AddMessaging(configuration);
+
+        Assert.Equal(expected, services.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(OutboxHostedService)));
     }
 
     [Fact]
