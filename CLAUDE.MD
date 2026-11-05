@@ -23,6 +23,9 @@ Customer, Order(status), OrderLine(unit_price_snapshot, price_id), Inventory(pro
 - Roles: Admin y Customer; política AdminOnly (rol Admin) en los endpoints de administración.
 - Precios solo INSERT, sin PUT ni DELETE: duplicado (sku_id, effective_from) -> 409 desde el índice único; effective_from anterior a hoy (UTC) -> 422.
 - Tests de integración con Testcontainers.MsSql (requieren Docker) y un único fixture compartido.
+- Outbox at-least-once: cada mensaje se escribe en la misma transacción que el cambio de estado y puede entregarse más de una vez.
+- Handlers idempotentes vía ProcessedMessage (MessageId, HandlerName), insertado en la misma transacción que sus efectos en la base de datos.
+- El dispatcher del outbox se puede alojar aparte: Outbox__Enabled=false lo saca de la API.
 
 ## Trabajo (ahorro de tokens)
 - No expliques el código ni muestres archivos completos; resume cambios en máx. 5 líneas.
