@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -16,6 +19,8 @@ public sealed class MsSqlCollection : ICollectionFixture<MsSqlFixture>
 public sealed class MsSqlFixture : IAsyncLifetime
 {
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+
+    private const string CustomerPassword = "Str0ng!Passw0rd";
 
     public string AdminEmail { get; } = $"{Guid.NewGuid():N}@example.test";
     public string AdminPassword { get; } = $"{Guid.NewGuid():N}Aa1!";
@@ -40,6 +45,28 @@ public sealed class MsSqlFixture : IAsyncLifetime
             foreach (var (key, value) in settings)
                 host.UseSetting(key, value);
         });
+
+    public Task<HttpClient> AdminClientAsync() => ClientForAsync(AdminEmail, AdminPassword);
+
+    public async Task<HttpClient> NewCustomerClientAsync()
+    {
+        var email = $"{Guid.NewGuid():N}@example.test";
+        var registered = await Factory.CreateClient()
+            .PostAsJsonAsync("/auth/register", new RegisterRequest(email, CustomerPassword, "Test Customer"));
+        Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
+        return await ClientForAsync(email, CustomerPassword);
+    }
+
+    private async Task<HttpClient> ClientForAsync(string email, string password)
+    {
+        var login = await Factory.CreateClient().PostAsJsonAsync("/auth/login", new LoginRequest(email, password));
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
+
+        var client = Factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
 
     public async Task DisposeAsync()
     {

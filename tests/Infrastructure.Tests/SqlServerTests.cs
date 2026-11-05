@@ -181,7 +181,7 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         var customer = new Customer(0, "Test", "test@example.test", user.Id);
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
-        var order = new Order(0, customer.Id, Jun);
+        var order = Order.Place(customer.Id, [(await db.EffectivePrices.SingleAsync(p => p.Id == 1), 1)], null, Jun);
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 

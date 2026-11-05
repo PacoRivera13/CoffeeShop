@@ -15,6 +15,7 @@ public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options)
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Inventory> Inventories => Set<Inventory>();
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,22 +25,23 @@ public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options)
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        EnsureEffectivePricesAreInsertOnly();
+        EnsureAppendOnlyRows();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        EnsureEffectivePricesAreInsertOnly();
+        EnsureAppendOnlyRows();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    private void EnsureEffectivePricesAreInsertOnly()
+    private void EnsureAppendOnlyRows()
     {
-        var changed = ChangeTracker.Entries<EffectivePrice>()
-            .Any(e => e.State is EntityState.Modified or EntityState.Deleted);
+        var changed = ChangeTracker.Entries()
+            .FirstOrDefault(e => e.Entity is EffectivePrice or InventoryMovement
+                && e.State is EntityState.Modified or EntityState.Deleted);
 
-        if (changed)
-            throw new InvalidOperationException("EffectivePrice rows are insert-only.");
+        if (changed is not null)
+            throw new InvalidOperationException($"{changed.Entity.GetType().Name} rows are insert-only.");
     }
 }

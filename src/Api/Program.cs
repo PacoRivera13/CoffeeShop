@@ -37,7 +37,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(AuthPolicies.AdminOnly, policy => policy.RequireRole(AppRoles.Admin));
+    .AddPolicy(AuthPolicies.AdminOnly, policy => policy.RequireRole(AppRoles.Admin))
+    .AddPolicy(AuthPolicies.CustomerOnly, policy => policy.RequireRole(AppRoles.Customer));
 
 var app = builder.Build();
 
@@ -58,5 +59,6 @@ app.UseAuthorization();
 app.MapCatalogEndpoints();
 app.MapAuthEndpoints();
 app.MapPriceEndpoints();
+app.MapOrderEndpoints();
 
 await app.RunAsync();

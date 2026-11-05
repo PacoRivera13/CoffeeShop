@@ -9,6 +9,7 @@ public static class AppRoles
 public static class AuthPolicies
 {
     public const string AdminOnly = "AdminOnly";
+    public const string CustomerOnly = "CustomerOnly";
 }
 
 public sealed record RegisterCommand(string Email, string Password, string Name);

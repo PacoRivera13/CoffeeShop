@@ -1,4 +1,5 @@
 using CoffeeShop.Domain;
+using CoffeeShop.Domain.Entities;
 using CoffeeShop.Domain.Pricing;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +16,7 @@ internal sealed class DomainExceptionHandler(IProblemDetailsService problemDetai
         var (status, title) = exception switch
         {
             NoEffectivePriceException => (StatusCodes.Status404NotFound, "No effective price"),
+            InvalidOrderTransitionException => (StatusCodes.Status409Conflict, "Invalid order transition"),
             _ => (StatusCodes.Status422UnprocessableEntity, "Domain rule violated"),
         };
 

@@ -1,4 +1,5 @@
 using CoffeeShop.Application.Auth;
+using CoffeeShop.Application.Orders;
 using CoffeeShop.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.Total).HasPrecision(18, 2);
+        builder.Property(o => o.Currency).HasMaxLength(3).IsFixedLength().IsUnicode(false).IsRequired();
+        builder.Property(o => o.IdempotencyKey).HasMaxLength(OrderConstraints.MaxIdempotencyKeyLength);
+        builder.Property<byte[]>("Version").IsRowVersion();
+        builder.HasIndex(o => new { o.CustomerId, o.IdempotencyKey }).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
+        builder.HasIndex(o => new { o.CustomerId, o.CreatedAt });
         builder.HasOne<Customer>().WithMany().HasForeignKey(o => o.CustomerId).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(o => o.Lines).WithOne().HasForeignKey(l => l.OrderId).OnDelete(DeleteBehavior.Restrict);
     }
@@ -56,6 +63,24 @@ internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLin
             .HasForeignKey(l => new { l.PriceId, l.SkuId })
             .HasPrincipalKey(p => new { p.Id, p.SkuId })
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class InventoryMovementConfiguration : IEntityTypeConfiguration<InventoryMovement>
+{
+    public const string InsertOnlyTrigger = "TR_InventoryMovements_InsertOnly";
+
+    public void Configure(EntityTypeBuilder<InventoryMovement> builder)
+    {
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_InventoryMovements_DeltaG", "[DeltaG] <> 0");
+            t.HasTrigger(InsertOnlyTrigger);
+        });
+        builder.Property(m => m.Reason).HasConversion<string>().HasMaxLength(20);
+        builder.HasOne<Product>().WithMany().HasForeignKey(m => m.ProductId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Order>().WithMany().HasForeignKey(m => m.OrderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(m => new { m.ProductId, m.CreatedAt });
     }
 }
 

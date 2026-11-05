@@ -9,6 +9,16 @@ public enum Grind
 public enum OrderStatus
 {
     Pending = 1,
-    Confirmed = 2,
-    Cancelled = 3
+    Paid = 2,
+    Preparing = 3,
+    Shipped = 4,
+    Delivered = 5,
+    Cancelled = 6
+}
+
+public enum MovementReason
+{
+    Reserve = 1,
+    Release = 2,
+    Restock = 3
 }

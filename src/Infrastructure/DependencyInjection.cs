@@ -1,6 +1,8 @@
 using CoffeeShop.Application;
 using CoffeeShop.Application.Auth;
+using CoffeeShop.Application.Orders;
 using CoffeeShop.Infrastructure.Auth;
+using CoffeeShop.Infrastructure.Orders;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,7 @@ public static class DependencyInjection
         services.AddDbContext<CoffeeShopDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<ICatalogReadStore, CatalogReadStore>();
         services.AddScoped<IPriceStore, PriceStore>();
+        services.AddScoped<IOrderService, OrderService>();
         return services;
     }
 

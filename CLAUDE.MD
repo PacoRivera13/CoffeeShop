@@ -1,5 +1,5 @@
 # CoffeeShop: baseline .NET + Angular
-Código en inglés. Respuestas en español, breves.
+Código en inglés. Respuestas en inglés, breves.
 
 ## Stack
 .NET (última LTS), ASP.NET Core minimal APIs, EF Core + SQL Server, xUnit,

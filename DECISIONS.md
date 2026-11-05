@@ -26,3 +26,12 @@
 - `isCurrent` resolves with the current time, like `GET /skus/{id}/price` without `asOf`.
 - A price dated today at an hour already past is accepted and changes the price from that hour; existing orders keep their frozen price.
 - Registration takes an `sp_getapplock` per normalized email inside its transaction, because concurrent Identity inserts for one email deadlocked and returned 500.
+- Orders validate the raw request (1-20 lines, qty 1-50) and also cap merged quantities at 50 per SKU.
+- A SKU without a current price makes `POST /orders` answer 422; mixed currencies are a domain error, also 422.
+- An Idempotency-Key (max 100 chars) replays the original order even if the new body differs; replay answers 200.
+- Stock is reserved per product in ascending product id so concurrent orders cannot deadlock on inventory rows.
+- `EnableRetryOnFailure` is off; order writes still run inside the execution strategy so enabling it later is safe.
+- Pay and cancel use a row version on Order and retry up to 3 times on a concurrent change, so concurrent cancels release stock once.
+- Inventory is seeded by migration SQL for products without a row, with a Restock movement, so stock always equals the sum of movements.
+- `InventoryMovements` are insert-only, enforced in `SaveChanges` and by a database trigger, like prices.
+- `POST /orders` needs the Customer role (`CustomerOnly` policy); `GET /orders/{id}` also allows Admin; pay and cancel are owner-only.
