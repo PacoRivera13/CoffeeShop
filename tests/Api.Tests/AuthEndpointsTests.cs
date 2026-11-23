@@ -137,6 +137,14 @@ public class AuthEndpointsTests(MsSqlFixture fixture)
         Assert.Equal(4, statuses.Count(s => s == HttpStatusCode.Conflict));
     }
 
+    [Fact]
+    public async Task Simultaneous_registrations_of_different_emails_all_succeed()
+    {
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => RegisterAsync(NewEmail())));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+    }
+
     [Theory]
     [InlineData("short1!")]
     [InlineData("alllowercase1!")]

@@ -13,6 +13,8 @@ Angular (última estable, standalone + signals), Docker Compose, MinIO (S3-compa
 Product(name, origin, roast) -> Sku(grind: WholeBean|Ground, size_g: 500|1000)
 EffectivePrice(sku_id, amount, currency, effective_from)  // solo INSERT
 Customer, Order(status), OrderLine(unit_price_snapshot, price_id), Inventory(product_id, stock_g)
+InventoryMovement(product_id, delta_g, reason: Reserve|Release|Restock, order_id?, created_at)  // solo INSERT; stock_g = suma de delta_g
+Order.idempotency_key: misma Idempotency-Key del mismo cliente -> pedido original (200), sin reservar stock ni escribir outbox
 
 ## Reglas
 - Precio vigente(sku, asOf) = fila con mayor effective_from <= asOf. UNIQUE(sku_id, effective_from).

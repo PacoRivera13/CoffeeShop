@@ -61,5 +61,6 @@ app.MapCatalogEndpoints();
 app.MapAuthEndpoints();
 app.MapPriceEndpoints();
 app.MapOrderEndpoints();
+app.MapAdminInventoryEndpoints();
 
 await app.RunAsync();

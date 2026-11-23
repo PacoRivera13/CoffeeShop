@@ -31,6 +31,17 @@ public class OpenApiDocumentTests(TestApiFactory factory) : IClassFixture<TestAp
         Assert.Contains("ISO 8601", asOf["description"]!.GetValue<string>());
     }
 
+    [Theory]
+    [InlineData("/admin/inventory", "get", "200,401,403")]
+    [InlineData("/admin/inventory/{productId}/restock", "post", "201,400,401,403,404,422")]
+    [InlineData("/admin/inventory/{productId}/movements", "get", "200,400,401,403,404")]
+    public async Task Admin_inventory_endpoints_declare_their_status_codes(string path, string method, string codes)
+    {
+        var responses = (await GetDocumentAsync())["paths"]![path]![method]!["responses"]!.AsObject();
+
+        Assert.Equal(codes.Split(','), responses.Select(r => r.Key).Order());
+    }
+
     /// <summary>After an intended API change, regenerate with UPDATE_OPENAPI=1 dotnet test --filter Committed_document.</summary>
     [Fact]
     public async Task Committed_document_matches_the_api()

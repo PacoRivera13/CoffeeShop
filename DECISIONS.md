@@ -43,3 +43,8 @@
 - External side effects such as emails stay at-least-once: a crash after the handler but before commit runs it again.
 - No outbox row is written for no-ops (paying a paid order, cancelling a cancelled one, idempotent replays).
 - Done outbox rows and ProcessedMessage markers are kept for now; a retention job is a follow-up once volumes matter.
+- Stock is reserved synchronously in the order transaction with a conditional UPDATE, not later from the outbox: a 201 means the grams are held, so there is no overselling and no compensation flow.
+- The database runs with READ_COMMITTED_SNAPSHOT: locking reads made concurrent sign-ups deadlock on the small Identity tables; registration also retries a deadlock victim up to 5 times.
+- API tests use a dedicated CoffeeShopTests database in the container instead of master, where READ_COMMITTED_SNAPSHOT cannot be enabled.
+- Restocking a product without an inventory row creates it; a restock that would overflow the stock column answers 422.
+- `GET /admin/inventory` is not paged: it lists every product, a small catalogue; movements are paged.

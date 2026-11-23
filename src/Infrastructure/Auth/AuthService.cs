@@ -12,6 +12,7 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
 {
     private const int MaxEmailLength = 256;
     private const int MaxNameLength = 200;
+    private const int MaxDeadlockAttempts = 5;
 
     public async Task<RegisterResult> RegisterAsync(RegisterCommand command, CancellationToken ct)
     {
@@ -21,6 +22,24 @@ internal sealed class AuthService(UserManager<IdentityUser> users, CoffeeShopDbC
         if (command.Email.Length > MaxEmailLength)
             return Invalid("email", $"Email must have at most {MaxEmailLength} characters.");
 
+        // Concurrent sign-ups of different emails can deadlock on the small Identity tables; SQL Server rolls the
+        // victim back, so the whole registration is simply run again.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await RegisterOnceAsync(command, name, ct);
+            }
+            catch (Exception ex) when (ex.IsDeadlock() && attempt < MaxDeadlockAttempts)
+            {
+                db.ChangeTracker.Clear();
+                await Task.Delay(TimeSpan.FromMilliseconds(Random.Shared.Next(10, 50) * attempt), ct);
+            }
+        }
+    }
+
+    private async Task<RegisterResult> RegisterOnceAsync(RegisterCommand command, string name, CancellationToken ct)
+    {
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);

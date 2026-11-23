@@ -5,6 +5,7 @@ using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MsSql;
 
@@ -28,12 +29,16 @@ public sealed class MsSqlFixture : IAsyncLifetime
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
+    /// <summary>A dedicated database: the container's default is master, where READ_COMMITTED_SNAPSHOT cannot be enabled.</summary>
+    private string ConnectionString =>
+        new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = "CoffeeShopTests" }.ConnectionString;
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
 
         await using var db = new CoffeeShopDbContext(
-            new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(_container.GetConnectionString()).Options);
+            new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(ConnectionString).Options);
         await db.Database.MigrateAsync();
 
         Factory = CreateFactory(("Admin:Email", AdminEmail), ("Admin:Password", AdminPassword));
@@ -42,7 +47,7 @@ public sealed class MsSqlFixture : IAsyncLifetime
     public WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
         new TestApiFactory().WithWebHostBuilder(host =>
         {
-            host.UseSetting("ConnectionStrings:Default", _container.GetConnectionString());
+            host.UseSetting("ConnectionStrings:Default", ConnectionString);
             host.ConfigureTestServices(OutboxTestDoubles.Register);
             foreach (var (key, value) in settings)
                 host.UseSetting(key, value);

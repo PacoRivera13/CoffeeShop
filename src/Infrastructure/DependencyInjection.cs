@@ -1,6 +1,8 @@
 using CoffeeShop.Application;
 using CoffeeShop.Application.Auth;
+using CoffeeShop.Application.Inventory;
 using CoffeeShop.Application.Messaging;
+using CoffeeShop.Infrastructure.Stock;
 using CoffeeShop.Application.Orders;
 using CoffeeShop.Infrastructure.Messaging;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ICatalogReadStore, CatalogReadStore>();
         services.AddScoped<IPriceStore, PriceStore>();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IInventoryService, InventoryService>();
         return services;
     }
 
