@@ -1,39 +1,41 @@
 # CoffeeShop: baseline .NET + Angular
-Código en inglés. Respuestas en inglés, breves.
+Code in English. Answers in English, brief.
 
 ## Stack
-.NET (última LTS), ASP.NET Core minimal APIs, EF Core + SQL Server, xUnit,
-Angular (última estable, standalone + signals), Docker Compose, MinIO (S3-compatible).
+.NET (latest LTS), ASP.NET Core minimal APIs, EF Core + SQL Server, xUnit,
+Angular (latest stable, standalone + signals), Docker Compose, MinIO (S3-compatible).
 
-## Estructura
+## Structure
 /src/Domain /src/Application /src/Infrastructure /src/Api
 /tests/*.Tests  /web (Angular)  /docker-compose.yml  /openapi.json
 
-## Dominio
+## Domain
 Product(name, origin, roast) -> Sku(grind: WholeBean|Ground, size_g: 500|1000)
-EffectivePrice(sku_id, amount, currency, effective_from)  // solo INSERT
+EffectivePrice(sku_id, amount, currency, effective_from)  // INSERT only
 Customer, Order(status), OrderLine(unit_price_snapshot, price_id), Inventory(product_id, stock_g)
-InventoryMovement(product_id, delta_g, reason: Reserve|Release|Restock, order_id?, created_at)  // solo INSERT; stock_g = suma de delta_g
-Order.idempotency_key: misma Idempotency-Key del mismo cliente -> pedido original (200), sin reservar stock ni escribir outbox
+InventoryMovement(product_id, delta_g, reason: Reserve|Release|Restock, order_id?, created_at)  // INSERT only; stock_g = sum of delta_g
+Order.idempotency_key: same Idempotency-Key from the same customer -> original order (200), without reserving stock or writing to the outbox
 
-## Reglas
-- Precio vigente(sku, asOf) = fila con mayor effective_from <= asOf. UNIQUE(sku_id, effective_from).
-- OrderLine congela el precio al crear el pedido.
-- Inventario en gramos por producto; cada línea descuenta size_g * qty.
-- Outbox transaccional; consumidores idempotentes. Bus detrás de IMessageBus.
-- Storage detrás de IFileStorage (MinIO ahora, S3 después).
-- Roles: Admin y Customer; política AdminOnly (rol Admin) en los endpoints de administración.
-- Precios solo INSERT, sin PUT ni DELETE: duplicado (sku_id, effective_from) -> 409 desde el índice único; effective_from anterior a hoy (UTC) -> 422.
-- Tests de integración con Testcontainers.MsSql (requieren Docker) y un único fixture compartido.
-- Outbox at-least-once: cada mensaje se escribe en la misma transacción que el cambio de estado y puede entregarse más de una vez.
-- Handlers idempotentes vía ProcessedMessage (MessageId, HandlerName), insertado en la misma transacción que sus efectos en la base de datos.
-- El dispatcher del outbox se puede alojar aparte: Outbox__Enabled=false lo saca de la API.
-- Handlers con I/O externo (p. ej. subidas) se ejecutan fuera de transacción (IRunsOutsideTransaction) y son idempotentes por clave determinista + restricción única.
+## Rules
+- Current price(sku, asOf) = the row with the greatest effective_from <= asOf. UNIQUE(sku_id, effective_from).
+- OrderLine freezes the price when the order is created.
+- Inventory in grams per product; each line deducts size_g * qty.
+- Transactional outbox; idempotent consumers. Bus behind IMessageBus.
+- Storage behind IFileStorage (MinIO now, S3 later).
+- Roles: Admin and Customer; AdminOnly policy (Admin role) on the admin endpoints.
+- Prices are INSERT only, no PUT or DELETE: duplicate (sku_id, effective_from) -> 409 from the unique index; effective_from before today (UTC) -> 422.
+- Integration tests with Testcontainers (SQL Server, MinIO; Docker required) and a single shared fixture.
+- At-least-once outbox: each message is written in the same transaction as the state change and may be delivered more than once.
+- Handlers are idempotent via ProcessedMessage (MessageId, HandlerName), inserted in the same transaction as their database side effects.
+- The outbox dispatcher can be hosted separately: Outbox__Enabled=false removes it from the API.
+- Handlers with external I/O (e.g. uploads) run outside a transaction (IRunsOutsideTransaction) and are idempotent through a deterministic key + unique constraint.
+- All file access goes through IFileStorage; object keys are deterministic (invoices/{orderId}.pdf) and invoice generation is idempotent.
+- Download URLs are presigned and short-lived (5 minutes) and are signed for the public endpoint; API responses never expose the bucket, storage key fields or the internal storage endpoint.
 
-## Trabajo (ahorro de tokens)
-- No expliques el código ni muestres archivos completos; resume cambios en máx. 5 líneas.
-- No releas archivos que acabas de escribir; usa grep en lugar de listar directorios enteros.
-- Build/test en modo silencioso (`dotnet build -v q`, `dotnet test --nologo -v q`); muestra solo fallos.
-- Ante ambigüedad menor, decide y anótalo en DECISIONS.md (1 línea); no preguntes.
-- Un milestone por vez. Commit convencional al terminar.
-- Antes de cada push: code review (nivel high) de los commits sin publicar; corrige los hallazgos confirmados, vuelve a pasar los tests y commitea antes de publicar.
+## Work (token saving)
+- Do not explain the code or show whole files; summarize changes in at most 5 lines.
+- Do not re-read files you just wrote; use grep instead of listing whole directories.
+- Build/test in quiet mode (`dotnet build -v q`, `dotnet test --nologo -v q`); show only failures.
+- For minor ambiguity, decide and record it in DECISIONS.md (1 line); do not ask.
+- One milestone at a time. Conventional commit when done.
+- Before each push: high-effort code review of the unpushed commits; fix confirmed findings, rerun the tests and commit before publishing.

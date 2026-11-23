@@ -1,5 +1,6 @@
 using CoffeeShop.Application.Messaging;
 using CoffeeShop.Application.Orders;
+using CoffeeShop.Application.Storage;
 using CoffeeShop.Infrastructure.Messaging;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Domain.Pricing;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoffeeShop.Infrastructure.Orders;
 
-internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) : IOrderService
+internal sealed class OrderService(CoffeeShopDbContext db, IFileStorage storage, TimeProvider clock) : IOrderService
 {
     private const int MaxConcurrencyAttempts = 3;
 
@@ -144,6 +145,26 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
         }
 
         return await query.SingleOrDefaultAsync(ct);
+    }
+
+    public async Task<InvoiceAccessResult> GetInvoiceAsync(string userId, bool isAdmin, int orderId, CancellationToken ct)
+    {
+        if (await GetAsync(userId, isAdmin, orderId, ct) is not { } order)
+            return new InvoiceAccessResult.NotFound();
+
+        // An invoice that exists is always served, so an order cancelled after invoicing keeps its receipt.
+        var invoice = await db.Invoices.AsNoTracking().SingleOrDefaultAsync(i => i.OrderId == orderId, ct);
+        if (invoice is null)
+        {
+            return order.Status is OrderStatus.Pending or OrderStatus.Cancelled
+                ? new InvoiceAccessResult.NotPaid(order.Status)
+                : new InvoiceAccessResult.Pending();
+        }
+
+        // Taken before signing, so the reported expiry is never later than the URL's real one.
+        var expiresAt = clock.GetUtcNow() + OrderConstraints.InvoiceUrlLifetime;
+        var url = await storage.GetDownloadUrlAsync(invoice.StorageKey, OrderConstraints.InvoiceUrlLifetime, ct);
+        return new InvoiceAccessResult.Ready(url, expiresAt, invoice.InvoiceNumber);
     }
 
     public async Task<OrderPage> ListAsync(string userId, int page, int pageSize, CancellationToken ct)

@@ -8,6 +8,9 @@ public static class OrderConstraints
     public const int MaxQty = 50;
     public const int MaxIdempotencyKeyLength = 100;
     public const int MaxPageSize = 100;
+
+    /// <summary>How long an invoice download URL stays valid.</summary>
+    public static readonly TimeSpan InvoiceUrlLifetime = TimeSpan.FromMinutes(5);
 }
 
 public sealed record OrderItem(int SkuId, int Qty);
@@ -40,6 +43,19 @@ public abstract record OrderActionResult
     public sealed record Conflict : OrderActionResult;
 }
 
+public abstract record InvoiceAccessResult
+{
+    public sealed record Ready(Uri Url, DateTimeOffset ExpiresAt, string InvoiceNumber) : InvoiceAccessResult;
+
+    /// <summary>The order is paid but its invoice has not been generated yet.</summary>
+    public sealed record Pending : InvoiceAccessResult;
+
+    /// <summary>The order is Pending or was cancelled without an invoice: none will be generated.</summary>
+    public sealed record NotPaid(OrderStatus Status) : InvoiceAccessResult;
+
+    public sealed record NotFound : InvoiceAccessResult;
+}
+
 public sealed record OrderPage(IReadOnlyList<Order> Items, int Page, int PageSize, int TotalCount);
 
 /// <summary>Orders of the customer linked to an Identity user; another customer's order behaves as not found.</summary>
@@ -54,4 +70,7 @@ public interface IOrderService
     Task<Order?> GetAsync(string userId, bool isAdmin, int orderId, CancellationToken ct);
 
     Task<OrderPage> ListAsync(string userId, int page, int pageSize, CancellationToken ct);
+
+    /// <summary>Gives the owner, or an Admin, a short-lived download URL for the order's invoice.</summary>
+    Task<InvoiceAccessResult> GetInvoiceAsync(string userId, bool isAdmin, int orderId, CancellationToken ct);
 }

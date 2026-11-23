@@ -10,6 +10,7 @@ namespace CoffeeShop.Api;
 public static class OrderEndpoints
 {
     private const string IdempotencyKeyHeader = "Idempotency-Key";
+    private const string InvoiceRetryAfterSeconds = "2";
 
     public static void MapOrderEndpoints(this IEndpointRouteBuilder app)
     {
@@ -41,6 +42,15 @@ public static class OrderEndpoints
             .Produces<OrderResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        orders.MapGet("/{id:int}/invoice", GetInvoice)
+            .WithName("GetOrderInvoice")
+            .WithSummary("Returns a 5-minute download URL for the invoice of the caller's order (any order for an Admin). 202 means it is still being generated.")
+            .Produces<InvoiceResponse>()
+            .Produces<InvoicePendingResponse>(StatusCodes.Status202Accepted)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders.MapPost("/{id:int}/pay", PayOrder)
             .WithName("PayOrder")
@@ -122,6 +132,30 @@ public static class OrderEndpoints
         return order is null ? OrderNotFound(id) : Results.Ok(ToResponse(order));
     }
 
+    private static async Task<IResult> GetInvoice(
+        int id, ClaimsPrincipal user, IOrderService orders, HttpContext http, CancellationToken ct)
+    {
+        var result = await orders.GetInvoiceAsync(UserId(user), user.IsInRole(AppRoles.Admin), id, ct);
+
+        switch (result)
+        {
+            case InvoiceAccessResult.Ready ready:
+                return Results.Ok(new InvoiceResponse(ready.Url.ToString(), ready.ExpiresAt, ready.InvoiceNumber));
+            case InvoiceAccessResult.Pending:
+                http.Response.Headers.RetryAfter = InvoiceRetryAfterSeconds;
+                return Results.Json(new InvoicePendingResponse("pending"), statusCode: StatusCodes.Status202Accepted);
+            case InvoiceAccessResult.NotPaid notPaid:
+                return Results.Problem(
+                    statusCode: StatusCodes.Status409Conflict,
+                    title: "Order not paid",
+                    detail: $"Order {id} is {notPaid.Status}; invoices exist only for paid orders.");
+            case InvoiceAccessResult.NotFound:
+                return OrderNotFound(id);
+            default:
+                throw new InvalidOperationException($"Unexpected result {result.GetType().Name}.");
+        }
+    }
+
     private static async Task<IResult> PayOrder(int id, ClaimsPrincipal user, IOrderService orders, CancellationToken ct) =>
         ToResult(id, await orders.PayAsync(UserId(user), id, ct));
 
@@ -166,5 +200,10 @@ public sealed record OrderResponse(
     int Id, string Status, decimal Total, string Currency, DateTimeOffset CreatedAt, IReadOnlyList<OrderLineResponse> Lines);
 
 public sealed record OrderLineResponse(int SkuId, int Qty, decimal UnitPrice, int PriceId, decimal LineTotal);
+
+/// <summary>A short-lived download link; it carries no bucket, storage key field or internal endpoint.</summary>
+public sealed record InvoiceResponse(string Url, DateTimeOffset ExpiresAt, string InvoiceNumber);
+
+public sealed record InvoicePendingResponse(string Status);
 
 public sealed record OrderPageResponse(IReadOnlyList<OrderResponse> Items, int Page, int PageSize, int TotalCount);

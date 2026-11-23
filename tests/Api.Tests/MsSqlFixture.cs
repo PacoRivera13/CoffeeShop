@@ -36,6 +36,7 @@ public sealed class MsSqlFixture : IAsyncLifetime
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
     public string MinioEndpoint => _minio.GetConnectionString();
+    public string PublicMinioEndpoint => new UriBuilder(_minio.GetConnectionString()) { Host = "localhost" }.Uri.ToString();
     public string MinioAccessKey => _minio.GetAccessKey();
     public string MinioSecretKey => _minio.GetSecretKey();
 
@@ -59,6 +60,8 @@ public sealed class MsSqlFixture : IAsyncLifetime
         {
             host.UseSetting("ConnectionStrings:Default", ConnectionString);
             host.UseSetting("Storage:Endpoint", _minio.GetConnectionString());
+            // Same server under another host name, so tests can tell public URLs from the internal endpoint.
+            host.UseSetting("Storage:PublicEndpoint", PublicMinioEndpoint);
             host.UseSetting("Storage:Bucket", InvoiceBucket);
             host.UseSetting("Storage:AccessKey", _minio.GetAccessKey());
             host.UseSetting("Storage:SecretKey", _minio.GetSecretKey());

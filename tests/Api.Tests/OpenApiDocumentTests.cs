@@ -35,7 +35,8 @@ public class OpenApiDocumentTests(TestApiFactory factory) : IClassFixture<TestAp
     [InlineData("/admin/inventory", "get", "200,401,403")]
     [InlineData("/admin/inventory/{productId}/restock", "post", "201,400,401,403,404,422")]
     [InlineData("/admin/inventory/{productId}/movements", "get", "200,400,401,403,404")]
-    public async Task Admin_inventory_endpoints_declare_their_status_codes(string path, string method, string codes)
+    [InlineData("/orders/{id}/invoice", "get", "200,202,401,404,409")]
+    public async Task Endpoints_declare_their_status_codes(string path, string method, string codes)
     {
         var responses = (await GetDocumentAsync())["paths"]![path]![method]!["responses"]!.AsObject();
 
