@@ -151,19 +151,13 @@ internal sealed class OrderService(CoffeeShopDbContext db, TimeProvider clock) :
         if (await FindCustomerIdAsync(userId, ct) is not { } customerId)
             return new OrderPage([], page, pageSize, 0);
 
-        var own = db.Orders.AsNoTracking().Where(o => o.CustomerId == customerId);
-        var totalCount = await own.CountAsync(ct);
-
-        // Computed in long: a huge page number would otherwise overflow into a negative OFFSET.
-        var skip = (long)(page - 1) * pageSize;
-        if (skip >= totalCount)
-            return new OrderPage([], page, pageSize, totalCount);
-
-        var items = await own.Include(o => o.Lines)
-            .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
-            .Skip((int)skip).Take(pageSize)
-            .AsSplitQuery()
-            .ToListAsync(ct);
+        var (items, totalCount) = await db.Orders.AsNoTracking()
+            .Where(o => o.CustomerId == customerId)
+            .ToPageAsync(
+                own => own.Include(o => o.Lines)
+                    .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
+                    .AsSplitQuery(),
+                page, pageSize, ct);
 
         return new OrderPage(items, page, pageSize, totalCount);
     }

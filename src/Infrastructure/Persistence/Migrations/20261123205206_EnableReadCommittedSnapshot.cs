@@ -13,9 +13,10 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
             // Readers see the last committed version instead of waiting on writers' locks. Without it, concurrent
             // sign-ups deadlock: Identity's lookups scan the small user tables and block on each other's new rows.
             // Writes still lock, so conditional updates, unique indexes and row versions keep protecting invariants.
-            // ALTER DATABASE cannot run inside a transaction; ROLLBACK IMMEDIATE ends other sessions so it can apply.
+            // ALTER DATABASE cannot run inside a transaction; ROLLBACK IMMEDIATE ends other sessions so it can apply, so it
+            // only runs when the option is still off (Azure SQL already has it on).
             migrationBuilder.Sql(
-                "ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;",
+                "IF (SELECT is_read_committed_snapshot_on FROM sys.databases WHERE database_id = DB_ID()) = 0 ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;",
                 suppressTransaction: true);
         }
 

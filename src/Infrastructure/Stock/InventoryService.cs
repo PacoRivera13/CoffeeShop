@@ -76,18 +76,9 @@ internal sealed class InventoryService(CoffeeShopDbContext db, TimeProvider cloc
         if (!await db.Products.AnyAsync(p => p.Id == productId, ct))
             return null;
 
-        var ledger = db.InventoryMovements.AsNoTracking().Where(m => m.ProductId == productId);
-        var totalCount = await ledger.CountAsync(ct);
-
-        // Computed in long: a huge page number would otherwise overflow into a negative OFFSET.
-        var skip = (long)(page - 1) * pageSize;
-        if (skip >= totalCount)
-            return new MovementPage([], page, pageSize, totalCount);
-
-        var items = await ledger
-            .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
-            .Skip((int)skip).Take(pageSize)
-            .ToListAsync(ct);
+        var (items, totalCount) = await db.InventoryMovements.AsNoTracking()
+            .Where(m => m.ProductId == productId)
+            .ToPageAsync(ledger => ledger.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id), page, pageSize, ct);
 
         return new MovementPage(items, page, pageSize, totalCount);
     }

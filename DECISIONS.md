@@ -48,3 +48,4 @@
 - API tests use a dedicated CoffeeShopTests database in the container instead of master, where READ_COMMITTED_SNAPSHOT cannot be enabled.
 - Restocking a product without an inventory row creates it; a restock that would overflow the stock column answers 422.
 - `GET /admin/inventory` is not paged: it lists every product, a small catalogue; movements are paged.
+- Deadlock retries cover registration only; other write paths rely on snapshot reads, and enabling EnableRetryOnFailure everywhere is a follow-up (explicit test transactions would need the strategy too).
