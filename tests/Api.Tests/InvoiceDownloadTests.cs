@@ -2,6 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CoffeeShop.Domain.Entities;
+using CoffeeShop.Infrastructure.Messaging;
+using CoffeeShop.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using static CoffeeShop.Api.Tests.OrderTestHelpers;
 
 namespace CoffeeShop.Api.Tests;
@@ -125,6 +130,41 @@ public class InvoiceDownloadTests(MsSqlFixture fixture)
 
         var after = await ReadyInvoiceAsync(customer, order.Id);
         Assert.Equal(before.InvoiceNumber, after.InvoiceNumber);
+    }
+
+    [Fact]
+    public async Task Paid_order_whose_invoice_generation_failed_is_a_conflict_not_an_endless_202()
+    {
+        var (customer, order) = await PlaceOrderAsync(pay: true);
+        fixture.Factory.Services.GetRequiredService<StorageScript>().FailPuts(Invoice.StorageKeyFor(order.Id), int.MaxValue);
+
+        for (var attempt = 0; attempt < TestDispatcher.MaxAttempts; attempt++)
+        {
+            Assert.Equal(HttpStatusCode.Accepted, (await GetInvoiceAsync(customer, order.Id)).StatusCode);
+            await DrainAsync();
+            _clock.Advance(TimeSpan.FromMinutes(6));
+        }
+
+        Assert.Equal(HttpStatusCode.Conflict, (await GetInvoiceAsync(customer, order.Id)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Order_paid_before_invoicing_existed_is_a_conflict_not_an_endless_202()
+    {
+        var (customer, order) = await PlaceOrderAsync(pay: true);
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            // An OrderPaid delivered before the invoice handler existed: Done, but no invoice was ever made.
+            var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
+            var ids = (await db.OutboxMessages.AsNoTracking().Where(m => m.Type == "OrderPaid").ToListAsync())
+                .Where(m => JsonDocument.Parse(m.PayloadJson).RootElement.GetProperty("orderId").GetInt32() == order.Id)
+                .Select(m => m.Id)
+                .ToList();
+            await db.OutboxMessages.Where(m => ids.Contains(m.Id))
+                .ExecuteUpdateAsync(s => s.SetProperty(m => m.Status, OutboxStatus.Done));
+        }
+
+        Assert.Equal(HttpStatusCode.Conflict, (await GetInvoiceAsync(customer, order.Id)).StatusCode);
     }
 
     [Fact]

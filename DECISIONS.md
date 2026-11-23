@@ -62,3 +62,5 @@
 - A presigned URL's path necessarily contains the bucket and object key; API fields never expose them or the internal endpoint.
 - MXN is the default currency: a migration appends MXN prices (1 EUR = 20 MXN, rounded) effective at migration time, plus an MXN twin 100 ns after each scheduled EUR change; EUR history and past orders stay untouched. All tests use MXN.
 - Invoice numbers can jump (e.g. to 51) after SQL Server restarts, because sequences cache values; gaps are accepted.
+- `GET /orders/{id}/invoice` answers 202 only while the order's OrderPaid message is pending; a paid order whose event is Done or Failed without an invoice answers 409 "Invoice unavailable".
+- POST /prices still accepts any ISO currency; MXN is the default through the catalogue data, not an enforced store currency.

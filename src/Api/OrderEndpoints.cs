@@ -149,6 +149,11 @@ public static class OrderEndpoints
                     statusCode: StatusCodes.Status409Conflict,
                     title: "Order not paid",
                     detail: $"Order {id} is {notPaid.Status}; invoices exist only for paid orders.");
+            case InvoiceAccessResult.Unavailable:
+                return Results.Problem(
+                    statusCode: StatusCodes.Status409Conflict,
+                    title: "Invoice unavailable",
+                    detail: $"Order {id} is paid but has no invoice, and none is being generated.");
             case InvoiceAccessResult.NotFound:
                 return OrderNotFound(id);
             default:

@@ -133,32 +133,31 @@ internal sealed class OrderService(CoffeeShopDbContext db, IFileStorage storage,
     private void AddToOutbox<TMessage>(TMessage message, DateTimeOffset occurredAt) where TMessage : notnull =>
         db.OutboxMessages.Add(OutboxMessage.For(message, occurredAt));
 
-    public async Task<Order?> GetAsync(string userId, bool isAdmin, int orderId, CancellationToken ct)
-    {
-        var query = db.Orders.AsNoTracking().Include(o => o.Lines).Where(o => o.Id == orderId);
-
-        if (!isAdmin)
-        {
-            if (await FindCustomerIdAsync(userId, ct) is not { } customerId)
-                return null;
-            query = query.Where(o => o.CustomerId == customerId);
-        }
-
-        return await query.SingleOrDefaultAsync(ct);
-    }
+    public async Task<Order?> GetAsync(string userId, bool isAdmin, int orderId, CancellationToken ct) =>
+        await VisibleOrdersAsync(userId, isAdmin, ct) is { } visible
+            ? await visible.Include(o => o.Lines).SingleOrDefaultAsync(o => o.Id == orderId, ct)
+            : null;
 
     public async Task<InvoiceAccessResult> GetInvoiceAsync(string userId, bool isAdmin, int orderId, CancellationToken ct)
     {
-        if (await GetAsync(userId, isAdmin, orderId, ct) is not { } order)
+        var status = await VisibleOrdersAsync(userId, isAdmin, ct) is { } visible
+            ? await visible.Where(o => o.Id == orderId).Select(o => (OrderStatus?)o.Status).SingleOrDefaultAsync(ct)
+            : null;
+        if (status is null)
             return new InvoiceAccessResult.NotFound();
 
         // An invoice that exists is always served, so an order cancelled after invoicing keeps its receipt.
         var invoice = await db.Invoices.AsNoTracking().SingleOrDefaultAsync(i => i.OrderId == orderId, ct);
         if (invoice is null)
         {
-            return order.Status is OrderStatus.Pending or OrderStatus.Cancelled
-                ? new InvoiceAccessResult.NotPaid(order.Status)
-                : new InvoiceAccessResult.Pending();
+            if (status is OrderStatus.Pending or OrderStatus.Cancelled)
+                return new InvoiceAccessResult.NotPaid(status.Value);
+
+            // 202 only while the OrderPaid event is still waiting in the outbox; once it is Done or Failed without
+            // an invoice (an order paid before invoicing existed, or generation that ran out of retries), none will come.
+            return await IsOrderPaidStillPendingAsync(orderId, ct)
+                ? new InvoiceAccessResult.Pending()
+                : new InvoiceAccessResult.Unavailable();
         }
 
         // Taken before signing, so the reported expiry is never later than the URL's real one.
@@ -247,6 +246,25 @@ internal sealed class OrderService(CoffeeShopDbContext db, IFileStorage storage,
             db.InventoryMovements.Add(InventoryMovement.Release(productId, grams, order.Id, now));
         }
     }
+
+    /// <summary>Every order for an Admin, otherwise the caller's own orders; null when the caller has no customer record.</summary>
+    private async Task<IQueryable<Order>?> VisibleOrdersAsync(string userId, bool isAdmin, CancellationToken ct)
+    {
+        if (isAdmin)
+            return db.Orders.AsNoTracking();
+
+        return await FindCustomerIdAsync(userId, ct) is { } customerId
+            ? db.Orders.AsNoTracking().Where(o => o.CustomerId == customerId)
+            : null;
+    }
+
+    private async Task<bool> IsOrderPaidStillPendingAsync(int orderId, CancellationToken ct) =>
+        await db.OutboxMessages
+            .FromSql($"""
+                SELECT * FROM [OutboxMessages]
+                WHERE [Type] = 'OrderPaid' AND TRY_CAST(JSON_VALUE([PayloadJson], '$.orderId') AS int) = {orderId}
+                """)
+            .AnyAsync(m => m.Status == OutboxStatus.Pending, ct);
 
     private Task<int?> FindCustomerIdAsync(string userId, CancellationToken ct) =>
         db.Customers.Where(c => c.IdentityUserId == userId).Select(c => (int?)c.Id).SingleOrDefaultAsync(ct);
