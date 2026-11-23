@@ -22,6 +22,8 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("InvoiceNumbers");
+
             modelBuilder.Entity("CoffeeShop.Domain.Entities.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -264,6 +266,52 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
                         });
 
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("CoffeeShop.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("char(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("TotalSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("Invoices");
                 });
 
             modelBuilder.Entity("CoffeeShop.Domain.Entities.Order", b =>
@@ -838,6 +886,15 @@ namespace CoffeeShop.Infrastructure.Persistence.Migrations
                     b.HasOne("CoffeeShop.Domain.Entities.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CoffeeShop.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("CoffeeShop.Domain.Entities.Order", null)
+                        .WithOne()
+                        .HasForeignKey("CoffeeShop.Domain.Entities.Invoice", "OrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

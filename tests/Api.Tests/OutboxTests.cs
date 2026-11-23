@@ -17,7 +17,7 @@ namespace CoffeeShop.Api.Tests;
 [Collection(MsSqlCollection.Name)]
 public class OutboxTests(MsSqlFixture fixture)
 {
-    private const int MaxAttempts = 5;
+    private const int MaxAttempts = TestDispatcher.MaxAttempts;
 
     // Ahead of the real clock, so messages written by the API during the test are already due.
     private readonly FakeClock _clock = new(DateTimeOffset.UtcNow.AddHours(1));
@@ -26,22 +26,9 @@ public class OutboxTests(MsSqlFixture fixture)
 
     private CapturedNotifications Emails => fixture.Factory.Services.GetRequiredService<CapturedNotifications>();
 
-    private OutboxDispatcher NewDispatcher(int batchSize = 100) => new(
-        fixture.Factory.Services.GetRequiredService<IServiceScopeFactory>(),
-        _clock,
-        Options.Create(new OutboxOptions { BatchSize = batchSize, MaxAttempts = MaxAttempts }),
-        NullLogger<OutboxDispatcher>.Instance);
+    private OutboxDispatcher NewDispatcher(int batchSize = 100) => TestDispatcher.Create(fixture, _clock, batchSize);
 
-    /// <summary>Dispatches until nothing is due; the shared database may also hold other tests' messages.</summary>
-    private static async Task<int> DrainAsync(OutboxDispatcher dispatcher)
-    {
-        var total = 0;
-        for (int claimed; (claimed = await dispatcher.DispatchOnceAsync(CancellationToken.None)) > 0;)
-            total += claimed;
-        return total;
-    }
-
-    private Task DrainAsync() => DrainAsync(NewDispatcher());
+    private Task DrainAsync() => NewDispatcher().DrainAsync();
 
     private async Task<List<OutboxMessage>> MessagesForOrderAsync(int orderId)
     {
@@ -200,7 +187,7 @@ public class OutboxTests(MsSqlFixture fixture)
         for (var i = 0; i < 10; i++)
             orders.Add(await PlaceOkAsync(customer, Body((product.Sku500, 1))));
 
-        await Task.WhenAll(DrainAsync(NewDispatcher(batchSize: 3)), DrainAsync(NewDispatcher(batchSize: 3)));
+        await Task.WhenAll(NewDispatcher(batchSize: 3).DrainAsync(), NewDispatcher(batchSize: 3).DrainAsync());
 
         foreach (var order in orders)
         {

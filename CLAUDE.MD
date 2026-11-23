@@ -28,6 +28,7 @@ Order.idempotency_key: misma Idempotency-Key del mismo cliente -> pedido origina
 - Outbox at-least-once: cada mensaje se escribe en la misma transacción que el cambio de estado y puede entregarse más de una vez.
 - Handlers idempotentes vía ProcessedMessage (MessageId, HandlerName), insertado en la misma transacción que sus efectos en la base de datos.
 - El dispatcher del outbox se puede alojar aparte: Outbox__Enabled=false lo saca de la API.
+- Handlers con I/O externo (p. ej. subidas) se ejecutan fuera de transacción (IRunsOutsideTransaction) y son idempotentes por clave determinista + restricción única.
 
 ## Trabajo (ahorro de tokens)
 - No expliques el código ni muestres archivos completos; resume cambios en máx. 5 líneas.

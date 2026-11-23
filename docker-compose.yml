@@ -9,5 +9,44 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
 
+  # Docker Hub and Quay no longer serve MinIO images; Chainguard's maintained build is pinned by digest.
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:bd92a45b821c0d85772c607ed7b49693efe78b3ffffae301b5d1b0981660de22
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:?Set MINIO_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?Set MINIO_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+
+  # Apply migrations before starting it: see README.
+  api:
+    build:
+      context: .
+      dockerfile: src/Api/Dockerfile
+    depends_on:
+      - sqlserver
+      - minio
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Server=sqlserver;Database=CoffeeShop;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Jwt__Key: ${Jwt__Key:?Set Jwt__Key in .env}
+      Jwt__Issuer: ${Jwt__Issuer:-coffeeshop}
+      Jwt__Audience: ${Jwt__Audience:-coffeeshop}
+      Admin__Email: ${Admin__Email:-}
+      Admin__Password: ${Admin__Password:-}
+      Storage__Endpoint: http://minio:9000
+      Storage__PublicEndpoint: http://localhost:9000
+      Storage__Bucket: ${Storage__Bucket:-coffeeshop-invoices}
+      Storage__AccessKey: ${MINIO_USER}
+      Storage__SecretKey: ${MINIO_PASSWORD}
+      Storage__CreateBucketIfMissing: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+
 volumes:
   sqlserver-data:
+  minio-data:

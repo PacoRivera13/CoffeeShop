@@ -17,12 +17,17 @@ public class CoffeeShopDbContext(DbContextOptions<CoffeeShopDbContext> options)
     public DbSet<OrderLine> OrderLines => Set<OrderLine>();
     public DbSet<Inventory> Inventories => Set<Inventory>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    /// <summary>SQL Server sequence behind invoice numbers; values are never reused, so gaps are possible.</summary>
+    public const string InvoiceNumberSequence = "InvoiceNumbers";
+
+    public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasSequence<long>(InvoiceNumberSequence);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoffeeShopDbContext).Assembly);
     }
 

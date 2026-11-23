@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Testcontainers.Minio;
 using Testcontainers.MsSql;
 
 namespace CoffeeShop.Api.Tests;
@@ -20,7 +21,12 @@ public sealed class MsSqlCollection : ICollectionFixture<MsSqlFixture>
 /// <summary>One migrated SQL Server container shared by every test in the collection.</summary>
 public sealed class MsSqlFixture : IAsyncLifetime
 {
+    // Docker Hub and Quay no longer serve MinIO images; Chainguard's maintained build is pinned by digest.
+    public const string MinioImage = "cgr.dev/chainguard/minio@sha256:bd92a45b821c0d85772c607ed7b49693efe78b3ffffae301b5d1b0981660de22";
+    public const string InvoiceBucket = "coffeeshop-invoices";
+
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+    private readonly MinioContainer _minio = new MinioBuilder(MinioImage).Build();
 
     private const string CustomerPassword = "Str0ng!Passw0rd";
 
@@ -29,13 +35,17 @@ public sealed class MsSqlFixture : IAsyncLifetime
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
+    public string MinioEndpoint => _minio.GetConnectionString();
+    public string MinioAccessKey => _minio.GetAccessKey();
+    public string MinioSecretKey => _minio.GetSecretKey();
+
     /// <summary>A dedicated database: the container's default is master, where READ_COMMITTED_SNAPSHOT cannot be enabled.</summary>
     private string ConnectionString =>
         new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = "CoffeeShopTests" }.ConnectionString;
 
     public async Task InitializeAsync()
     {
-        await _container.StartAsync();
+        await Task.WhenAll(_container.StartAsync(), _minio.StartAsync());
 
         await using var db = new CoffeeShopDbContext(
             new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(ConnectionString).Options);
@@ -48,6 +58,11 @@ public sealed class MsSqlFixture : IAsyncLifetime
         new TestApiFactory().WithWebHostBuilder(host =>
         {
             host.UseSetting("ConnectionStrings:Default", ConnectionString);
+            host.UseSetting("Storage:Endpoint", _minio.GetConnectionString());
+            host.UseSetting("Storage:Bucket", InvoiceBucket);
+            host.UseSetting("Storage:AccessKey", _minio.GetAccessKey());
+            host.UseSetting("Storage:SecretKey", _minio.GetSecretKey());
+            host.UseSetting("Storage:CreateBucketIfMissing", "true");
             host.ConfigureTestServices(OutboxTestDoubles.Register);
             foreach (var (key, value) in settings)
                 host.UseSetting(key, value);
@@ -79,5 +94,6 @@ public sealed class MsSqlFixture : IAsyncLifetime
     {
         await Factory.DisposeAsync();
         await _container.DisposeAsync();
+        await _minio.DisposeAsync();
     }
 }

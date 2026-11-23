@@ -20,6 +20,7 @@ builder.Services.AddScoped<PriceService>();
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default"));
 builder.Services.AddAuthInfrastructure(jwtOptions);
 builder.Services.AddMessaging(builder.Configuration);
+builder.Services.AddStorage(builder.Configuration);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -44,6 +45,7 @@ builder.Services.AddAuthorizationBuilder()
 var app = builder.Build();
 
 await app.Services.SeedAdminAsync(app.Configuration);
+await app.Services.EnsureStorageBucketAsync();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

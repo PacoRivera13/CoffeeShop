@@ -16,6 +16,9 @@
   <Folder Name="/tests/Api.Tests/">
     <Project Path="tests/Api.Tests/CoffeeShop.Api.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/Application.Tests/">
+    <Project Path="tests/Application.Tests/CoffeeShop.Application.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Domain.Tests/">
     <Project Path="tests/Domain.Tests/CoffeeShop.Domain.Tests.csproj" />
   </Folder>

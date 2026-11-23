@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using CoffeeShop.Application.Messaging;
+using CoffeeShop.Application.Storage;
 using CoffeeShop.Infrastructure.Messaging;
+using CoffeeShop.Infrastructure.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +16,48 @@ public static class OutboxTestDoubles
         services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<CapturedNotifications>());
         services.AddSingleton<HandlerScript>();
         services.AddScoped<IMessageHandler<OrderCreated>, ScriptedHandler>();
+        services.AddSingleton<StorageScript>();
+        services.AddSingleton<IFileStorage>(sp =>
+            new FlakyFileStorage(sp.GetRequiredService<S3FileStorage>(), sp.GetRequiredService<StorageScript>()));
     }
+}
+
+/// <summary>Lets a test make uploads of one key fail a number of times, and counts every upload attempt.</summary>
+public sealed class StorageScript
+{
+    private readonly ConcurrentDictionary<string, int> _failuresLeft = new();
+    private readonly ConcurrentDictionary<string, int> _puts = new();
+
+    public void FailPuts(string key, int times) => _failuresLeft[key] = times;
+
+    public int Puts(string key) => _puts.GetValueOrDefault(key);
+
+    public void BeforePut(string key)
+    {
+        _puts.AddOrUpdate(key, 1, (_, puts) => puts + 1);
+        if (_failuresLeft.TryGetValue(key, out var left) && left > 0)
+        {
+            _failuresLeft[key] = left - 1;
+            throw new IOException($"Scripted storage failure for {key}.");
+        }
+    }
+}
+
+/// <summary>Decorates the real storage so tests can inject upload failures.</summary>
+public sealed class FlakyFileStorage(IFileStorage inner, StorageScript script) : IFileStorage
+{
+    public Task PutAsync(string key, Stream content, string contentType, CancellationToken ct)
+    {
+        script.BeforePut(key);
+        return inner.PutAsync(key, content, contentType, ct);
+    }
+
+    public Task<bool> ExistsAsync(string key, CancellationToken ct) => inner.ExistsAsync(key, ct);
+
+    public Task<Uri> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct) =>
+        inner.GetDownloadUrlAsync(key, expires, ct);
+
+    public Task DeleteAsync(string key, CancellationToken ct) => inner.DeleteAsync(key, ct);
 }
 
 /// <summary>A clock tests move by hand, so retries and backoff need no sleeps.</summary>

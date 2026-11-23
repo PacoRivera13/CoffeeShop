@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CoffeeShop.Infrastructure.Messaging;
 
 /// <summary>
-/// Delivers a message to every registered handler in this process. Each handler runs in its own scope and
-/// transaction, guarded by a ProcessedMessage row, so a redelivered message never runs a handler twice.
+/// Delivers a message to every registered handler in this process. Each handler runs in its own scope and is
+/// guarded by a ProcessedMessage row, so a redelivered message never runs a handler twice once it succeeded.
 /// </summary>
 internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvider clock) : IMessageBus
 {
@@ -18,6 +18,9 @@ internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvi
 
     private static readonly ConcurrentDictionary<Type, MethodInfo> DeliverByType = new();
 
+    // Registrations are fixed once the container is built, so the handler types per message type are looked up once.
+    private readonly ConcurrentDictionary<Type, Type[]> _handlerTypes = new();
+
     public Task PublishAsync(MessageEnvelope envelope, CancellationToken ct)
     {
         var message = MessageTypes.Deserialize(envelope);
@@ -25,9 +28,6 @@ internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvi
 
         return (Task)deliver.Invoke(this, [message, new MessageContext(envelope.MessageId), ct])!;
     }
-
-    // Registrations are fixed once the container is built, so the handler types per message type are looked up once.
-    private readonly ConcurrentDictionary<Type, Type[]> _handlerTypes = new();
 
     private async Task DeliverAsync<TMessage>(TMessage message, MessageContext context, CancellationToken ct)
     {
@@ -48,17 +48,28 @@ internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvi
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
         var handlerName = handlerType.FullName!;
 
+        if (await db.ProcessedMessages.AnyAsync(p => p.MessageId == context.MessageId && p.HandlerName == handlerName, ct))
+            return;
+
+        if (handler is IRunsOutsideTransaction)
+            await InvokeOutsideTransactionAsync(handler, db, handlerName, message, context, ct);
+        else
+            await InvokeInTransactionAsync(handler, db, handlerName, message, context, ct);
+    }
+
+    /// <summary>
+    /// Runs the handler and its database side effects in one transaction. The marker goes in first: its key lock
+    /// makes a concurrent duplicate wait, and then fail, instead of running the handler a second time.
+    /// </summary>
+    private async Task InvokeInTransactionAsync<TMessage>(
+        IMessageHandler<TMessage> handler, CoffeeShopDbContext db, string handlerName, TMessage message, MessageContext context, CancellationToken ct)
+    {
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear();
-            if (await db.ProcessedMessages.AnyAsync(p => p.MessageId == context.MessageId && p.HandlerName == handlerName, ct))
-                return;
-
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-            // The marker goes in first: its key lock makes a concurrent duplicate wait, and then fail, instead of
-            // running the handler a second time.
             db.ProcessedMessages.Add(new ProcessedMessage(context.MessageId, handlerName, clock.GetUtcNow()));
             try
             {
@@ -73,5 +84,26 @@ internal sealed class InProcessMessageBus(IServiceScopeFactory scopes, TimeProvi
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         });
+    }
+
+    /// <summary>
+    /// Runs a handler that does external I/O without holding a transaction; the marker is recorded once it succeeds.
+    /// A crash in between runs the handler again, which its own idempotency must absorb.
+    /// </summary>
+    private async Task InvokeOutsideTransactionAsync<TMessage>(
+        IMessageHandler<TMessage> handler, CoffeeShopDbContext db, string handlerName, TMessage message, MessageContext context, CancellationToken ct)
+    {
+        await handler.HandleAsync(message, context, ct);
+
+        db.ChangeTracker.Clear();
+        db.ProcessedMessages.Add(new ProcessedMessage(context.MessageId, handlerName, clock.GetUtcNow()));
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            // A concurrent delivery recorded it first.
+        }
     }
 }

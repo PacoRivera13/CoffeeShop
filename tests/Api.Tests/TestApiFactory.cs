@@ -19,5 +19,12 @@ public class TestApiFactory : WebApplicationFactory<Program>
             .UseSetting("Jwt:Audience", "coffeeshop-tests")
             .UseSetting("Admin:Email", string.Empty)
             .UseSetting("Admin:Password", string.Empty)
-            .UseSetting("Outbox:Enabled", "false");
+            .UseSetting("Outbox:Enabled", "false")
+            // Valid but unused unless a test points storage at a real MinIO container.
+            .UseSetting("Storage:Endpoint", "http://localhost:9")
+            .UseSetting("Storage:PublicEndpoint", string.Empty)
+            .UseSetting("Storage:Bucket", "coffeeshop-tests")
+            .UseSetting("Storage:AccessKey", "tests")
+            .UseSetting("Storage:SecretKey", "tests")
+            .UseSetting("Storage:CreateBucketIfMissing", "false");
 }

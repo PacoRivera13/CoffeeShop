@@ -1,5 +1,5 @@
 # Decisions
-- Local verification uses LocalDB; auth tests use Testcontainers and need Docker running; `docker-compose.yml` has not been run.
+- Local verification uses LocalDB; integration tests use Testcontainers (SQL Server, MinIO) and need Docker running.
 - IDs are `int` identity columns, with fixed values in the seed.
 - `asOf` accepts ISO 8601 only and is read as UTC when it has no offset; it defaults to the current time.
 - A SKU with no effective price returns 404 with its own title, distinct from an unknown SKU.
@@ -49,3 +49,10 @@
 - Restocking a product without an inventory row creates it; a restock that would overflow the stock column answers 422.
 - `GET /admin/inventory` is not paged: it lists every product, a small catalogue; movements are paged.
 - Deadlock retries cover registration only; other write paths rely on snapshot reads, and enabling EnableRetryOnFailure everywhere is a follow-up (explicit test transactions would need the strategy too).
+- Docker Hub and Quay no longer serve MinIO images; compose and tests pin Chainguard's maintained MinIO build by digest.
+- S3FileStorage uses one client for I/O (internal endpoint) and one only for presigning (public endpoint), with SDK v4 checksums set to WHEN_REQUIRED for MinIO compatibility.
+- Storage settings are validated at startup like JWT; Development defaults point at localhost:9000, keys come from env vars or user-secrets.
+- Handlers marked IRunsOutsideTransaction (InvoiceHandler) run without the bus transaction and record ProcessedMessage after success, so uploads never hold database locks.
+- The invoice number is drawn from the SQL sequence before rendering because it is printed on the PDF; failed attempts leave gaps.
+- A concurrent duplicate invoice delivery re-uploads the PDF with the winning row's number, so the stored file always matches the row.
+- Compose does not run migrations; apply them with dotnet ef against the compose SQL Server before starting api.

@@ -18,6 +18,12 @@ public interface IMessageHandler<in TMessage>
     Task HandleAsync(TMessage message, MessageContext context, CancellationToken ct);
 }
 
+/// <summary>
+/// Marks a handler that does external I/O (such as uploads) and must not run inside the bus's transaction. It is
+/// responsible for its own idempotency, for example a deterministic key plus a unique constraint.
+/// </summary>
+public interface IRunsOutsideTransaction;
+
 public sealed record OrderCreated(int OrderId, int CustomerId, decimal Total, string Currency, DateTimeOffset OccurredAt);
 
 public sealed record OrderPaid(int OrderId, int CustomerId, decimal Total, string Currency, DateTimeOffset OccurredAt);
