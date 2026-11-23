@@ -29,7 +29,10 @@ public abstract record CreatePriceResult
 
 public sealed record PriceHistoryItem(EffectivePrice Price, bool IsCurrent);
 
-public sealed class PriceService(ICatalogReadStore catalog, IPriceStore prices, TimeProvider clock)
+/// <summary>The single currency the store sells in; orders cannot mix currencies, so every new price must use it.</summary>
+public sealed record PricingSettings(string Currency);
+
+public sealed class PriceService(ICatalogReadStore catalog, IPriceStore prices, PricingSettings pricing, TimeProvider clock)
 {
     public async Task<CreatePriceResult> CreateAsync(CreatePriceCommand command, CancellationToken ct)
     {
@@ -42,6 +45,9 @@ public sealed class PriceService(ICatalogReadStore catalog, IPriceStore prices, 
         {
             return new CreatePriceResult.Invalid(ex.Message);
         }
+
+        if (command.Currency != pricing.Currency)
+            return new CreatePriceResult.Invalid($"Prices must be in the store currency {pricing.Currency}, got '{command.Currency}'.");
 
         if (command.EffectiveFrom.UtcDateTime.Date < clock.GetUtcNow().UtcDateTime.Date)
             return new CreatePriceResult.PastDate();

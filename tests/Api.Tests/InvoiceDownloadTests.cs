@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using CoffeeShop.Application.Storage;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure.Messaging;
 using CoffeeShop.Infrastructure.Persistence;
@@ -163,6 +164,17 @@ public class InvoiceDownloadTests(MsSqlFixture fixture)
             await db.OutboxMessages.Where(m => ids.Contains(m.Id))
                 .ExecuteUpdateAsync(s => s.SetProperty(m => m.Status, OutboxStatus.Done));
         }
+
+        Assert.Equal(HttpStatusCode.Conflict, (await GetInvoiceAsync(customer, order.Id)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Invoice_whose_file_was_removed_is_a_conflict_not_a_broken_url()
+    {
+        var (customer, order) = await PlaceOrderAsync(pay: true);
+        await DrainAsync();
+        await fixture.Factory.Services.GetRequiredService<IFileStorage>()
+            .DeleteAsync(Invoice.StorageKeyFor(order.Id), CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.Conflict, (await GetInvoiceAsync(customer, order.Id)).StatusCode);
     }

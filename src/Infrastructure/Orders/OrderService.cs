@@ -161,6 +161,10 @@ internal sealed class OrderService(CoffeeShopDbContext db, IFileStorage storage,
         }
 
         // Taken before signing, so the reported expiry is never later than the URL's real one.
+        // A row whose PDF was removed from the bucket would otherwise hand out a URL that answers NoSuchKey.
+        if (!await storage.ExistsAsync(invoice.StorageKey, ct))
+            return new InvoiceAccessResult.Unavailable();
+
         var expiresAt = clock.GetUtcNow() + OrderConstraints.InvoiceUrlLifetime;
         var url = await storage.GetDownloadUrlAsync(invoice.StorageKey, OrderConstraints.InvoiceUrlLifetime, ct);
         return new InvoiceAccessResult.Ready(url, expiresAt, invoice.InvoiceNumber);

@@ -53,7 +53,7 @@ public abstract record InvoiceAccessResult
     /// <summary>The order is Pending or was cancelled without an invoice: none will be generated.</summary>
     public sealed record NotPaid(OrderStatus Status) : InvoiceAccessResult;
 
-    /// <summary>The order is paid, but its invoice was never generated and no generation is pending.</summary>
+    /// <summary>The order is paid, but no invoice file exists and none is being generated.</summary>
     public sealed record Unavailable : InvoiceAccessResult;
 
     public sealed record NotFound : InvoiceAccessResult;

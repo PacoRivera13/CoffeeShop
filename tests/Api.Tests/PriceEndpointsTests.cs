@@ -155,6 +155,8 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     [InlineData(1, "EURO")]
     [InlineData(1, "EUX")]
     [InlineData(1, "")]
+    [InlineData(1, "USD")]
+    [InlineData(1, "EUR")]
     public async Task Invalid_amount_or_currency_is_bad_request(double amount, string currency)
     {
         var skuId = await NewSkuAsync();

@@ -1,6 +1,7 @@
 using CoffeeShop.Api;
 using CoffeeShop.Application;
 using CoffeeShop.Application.Auth;
+using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure;
 using CoffeeShop.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,6 +18,10 @@ builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PriceService>();
+var storeCurrency = builder.Configuration["Pricing:Currency"] ?? "MXN";
+if (!IsoCurrencies.IsValid(storeCurrency))
+    throw new InvalidOperationException($"Pricing:Currency must be an uppercase ISO 4217 code, got '{storeCurrency}'.");
+builder.Services.AddSingleton(new PricingSettings(storeCurrency));
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default"));
 builder.Services.AddAuthInfrastructure(jwtOptions);
 builder.Services.AddMessaging(builder.Configuration);

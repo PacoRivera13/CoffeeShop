@@ -153,7 +153,7 @@ public static class OrderEndpoints
                 return Results.Problem(
                     statusCode: StatusCodes.Status409Conflict,
                     title: "Invoice unavailable",
-                    detail: $"Order {id} is paid but has no invoice, and none is being generated.");
+                    detail: $"Order {id} is paid but has no invoice file, and none is being generated.");
             case InvoiceAccessResult.NotFound:
                 return OrderNotFound(id);
             default:
