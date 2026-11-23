@@ -44,7 +44,7 @@ public class CoffeeShopDbContextTests
     public async Task Inserting_a_price_is_allowed()
     {
         using var db = CreateContext();
-        db.EffectivePrices.Add(new EffectivePrice(100, 2, 25m, "EUR", new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+        db.EffectivePrices.Add(new EffectivePrice(100, 2, 25m, "MXN", new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)));
 
         Assert.Equal(1, await db.SaveChangesAsync());
     }

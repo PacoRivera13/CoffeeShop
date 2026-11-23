@@ -16,7 +16,7 @@ public static class OrderTestHelpers
     public static DateTimeOffset Today => new(DateTime.UtcNow.Date, TimeSpan.Zero);
 
     /// <summary>Rows cannot be deleted and the database is shared, so every test orders its own product.</summary>
-    public static async Task<TestProduct> NewProductAsync(this MsSqlFixture fixture, int stockG = 20_000, string currency = "EUR")
+    public static async Task<TestProduct> NewProductAsync(this MsSqlFixture fixture, int stockG = 20_000, string currency = "MXN")
     {
         using var scope = fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();

@@ -103,9 +103,9 @@ public class CatalogEndpointsTests : IClassFixture<TestApiFactory>
     {
         private static readonly EffectivePrice[] Prices =
         [
-            new(1, 1, 12m, "EUR", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
-            new(2, 1, 14m, "EUR", new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero)),
-            new(3, 1, 15m, "EUR", new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+            new(1, 1, 12m, "MXN", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+            new(2, 1, 14m, "MXN", new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero)),
+            new(3, 1, 15m, "MXN", new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)),
         ];
 
         public Task<IReadOnlyList<Product>> GetProductsAsync(CancellationToken ct)

@@ -60,3 +60,5 @@
 - Invoices are demo receipts ("Demo receipt - not fiscally valid"): no taxes, no fiscal numbering guarantees (sequence gaps allowed), not legal invoices.
 - `GET /orders/{id}/invoice`: an existing invoice is always served (200), even after cancel; no invoice yet answers 202 with Retry-After for paid or later orders and 409 for Pending or Cancelled ones, which will never get one.
 - A presigned URL's path necessarily contains the bucket and object key; API fields never expose them or the internal endpoint.
+- MXN is the default currency: a migration appends MXN prices (1 EUR = 20 MXN, rounded) effective at migration time, plus an MXN twin 100 ns after each scheduled EUR change; EUR history and past orders stay untouched. All tests use MXN.
+- Invoice numbers can jump (e.g. to 51) after SQL Server restarts, because sequences cache values; gaps are accepted.

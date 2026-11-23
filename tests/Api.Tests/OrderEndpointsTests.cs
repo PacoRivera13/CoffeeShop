@@ -12,7 +12,7 @@ namespace CoffeeShop.Api.Tests;
 [Collection(MsSqlCollection.Name)]
 public class OrderEndpointsTests(MsSqlFixture fixture)
 {
-    private Task<TestProduct> NewProductAsync(int stockG = 20_000, string currency = "EUR") =>
+    private Task<TestProduct> NewProductAsync(int stockG = 20_000, string currency = "MXN") =>
         fixture.NewProductAsync(stockG, currency);
 
     private async Task<(int StockG, int MovementSum, List<InventoryMovement> Movements)> InventoryOfAsync(int productId)
@@ -37,7 +37,7 @@ public class OrderEndpointsTests(MsSqlFixture fixture)
         var order = (await response.Content.ReadFromJsonAsync<OrderResponse>())!;
         Assert.Equal($"/orders/{order.Id}", response.Headers.Location?.ToString());
         Assert.Equal("Pending", order.Status);
-        Assert.Equal("EUR", order.Currency);
+        Assert.Equal("MXN", order.Currency);
         Assert.Equal(2 * Price500 + Price1000, order.Total);
         Assert.Equal([(product.Sku500, 2, Price500), (product.Sku1000, 1, Price1000)], order.Lines.Select(l => (l.SkuId, l.Qty, l.UnitPrice)));
         Assert.All(order.Lines, l => Assert.True(l.PriceId > 0));
@@ -70,7 +70,7 @@ public class OrderEndpointsTests(MsSqlFixture fixture)
         var order = await PlaceOkAsync(customer, Body((product.Sku500, 1)));
 
         var admin = await fixture.AdminClientAsync();
-        var priceChange = await admin.PostAsJsonAsync("/prices", new CreatePriceRequest(product.Sku500, 99m, "EUR", Today.ToString("yyyy-MM-dd")));
+        var priceChange = await admin.PostAsJsonAsync("/prices", new CreatePriceRequest(product.Sku500, 99m, "MXN", Today.ToString("yyyy-MM-dd")));
         Assert.Equal(HttpStatusCode.Created, priceChange.StatusCode);
 
         var reloaded = await customer.GetFromJsonAsync<OrderResponse>($"/orders/{order.Id}");

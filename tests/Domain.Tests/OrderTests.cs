@@ -6,7 +6,7 @@ public class OrderTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 5, 12, 0, 0, TimeSpan.Zero);
 
-    private static EffectivePrice Price(int id, int skuId, decimal amount, string currency = "EUR") =>
+    private static EffectivePrice Price(int id, int skuId, decimal amount, string currency = "MXN") =>
         new(id, skuId, amount, currency, Now.AddDays(-1));
 
     private static Order NewOrder() => Order.Place(7, [(Price(1, 1, 12.50m), 2), (Price(2, 2, 20m), 1)], "key", Now);
@@ -34,7 +34,7 @@ public class OrderTests
 
         Assert.Equal(OrderStatus.Pending, order.Status);
         Assert.Equal(45m, order.Total);
-        Assert.Equal("EUR", order.Currency);
+        Assert.Equal("MXN", order.Currency);
         Assert.Equal("key", order.IdempotencyKey);
         Assert.Equal([(1, 2, 12.50m, 1), (2, 1, 20m, 2)], order.Lines.Select(l => (l.SkuId, l.Qty, l.UnitPriceSnapshot, l.PriceId)));
     }

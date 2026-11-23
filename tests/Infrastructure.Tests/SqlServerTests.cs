@@ -1,5 +1,6 @@
 using CoffeeShop.Application;
 using CoffeeShop.Domain.Entities;
+using CoffeeShop.Domain.Pricing;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
@@ -69,7 +70,27 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.Equal(3, await db.Products.CountAsync());
         Assert.Equal(12, await db.Skus.CountAsync());
-        Assert.Equal(14, await db.EffectivePrices.CountAsync());
+        Assert.Equal(14, await db.EffectivePrices.CountAsync(p => p.Currency == "EUR"));
+        Assert.Equal(13, await db.EffectivePrices.CountAsync(p => p.Currency == "MXN"));
+    }
+
+    [SqlServerFact]
+    public async Task Seeded_catalog_is_priced_in_mxn_from_the_migration_on()
+    {
+        using var scope = fixture.CreateScope();
+        var store = scope.ServiceProvider.GetRequiredService<ICatalogReadStore>();
+        var now = DateTimeOffset.UtcNow;
+        var afterScheduledChange = new DateTimeOffset(2027, 1, 2, 0, 0, 0, TimeSpan.Zero);
+
+        var current = PriceResolver.Resolve(await store.GetPricesAsync(1, now, CancellationToken.None), now);
+        var scheduled = PriceResolver.Resolve(
+            await store.GetPricesAsync(1, afterScheduledChange, CancellationToken.None), afterScheduledChange);
+        var history = PriceResolver.Resolve(await store.GetPricesAsync(1, Jun, CancellationToken.None), Jun);
+
+        // 14 EUR and 15 EUR at 1 EUR = 20 MXN; the EUR history before the migration is untouched.
+        Assert.Equal(("MXN", 280.00m), (current.Currency, current.Amount));
+        Assert.Equal(("MXN", 300.00m), (scheduled.Currency, scheduled.Amount));
+        Assert.Equal(("EUR", 14.00m), (history.Currency, history.Amount));
     }
 
     [SqlServerFact]
@@ -113,7 +134,7 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
         await using var transaction = await db.Database.BeginTransactionAsync();
 
-        db.EffectivePrices.Add(new EffectivePrice(0, 2, 25m, "EUR", Jun));
+        db.EffectivePrices.Add(new EffectivePrice(0, 2, 25m, "MXN", Jun));
 
         Assert.Equal(1, await db.SaveChangesAsync());
     }
@@ -143,7 +164,7 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         using var scope = fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
 
-        db.EffectivePrices.Add(new EffectivePrice(0, 1, 1m, "EUR", Jun));
+        db.EffectivePrices.Add(new EffectivePrice(0, 1, 1m, "MXN", Jun));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
@@ -155,7 +176,7 @@ public class SqlServerTests(SqlServerFixture fixture) : IClassFixture<SqlServerF
         var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
 
         await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlRawAsync(
-            "INSERT INTO EffectivePrices (SkuId, Amount, Currency, EffectiveFrom) VALUES (1, 0, 'EUR', '2030-01-01T00:00:00+00:00')"));
+            "INSERT INTO EffectivePrices (SkuId, Amount, Currency, EffectiveFrom) VALUES (1, 0, 'MXN', '2030-01-01T00:00:00+00:00')"));
     }
 
     [SqlServerFact]

@@ -16,7 +16,7 @@ public class InvoicePdfRendererTests
             12,
             "Alice",
             "alice@example.test",
-            "EUR",
+            "MXN",
             [
                 new InvoiceLine("Yirgacheffe", Grind.WholeBean, 500, 2, 12.50m, 25.00m),
                 new InvoiceLine("Huila", Grind.Ground, 1000, 3, 18.00m, 54.00m),

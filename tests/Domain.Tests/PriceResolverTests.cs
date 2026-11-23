@@ -11,7 +11,7 @@ public class PriceResolverTests
     private static readonly DateTimeOffset Next = new(2027, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private static EffectivePrice Price(int id, decimal amount, DateTimeOffset from) =>
-        new(id, skuId: 1, amount, "EUR", from);
+        new(id, skuId: 1, amount, "MXN", from);
 
     [Fact]
     public void Future_price_does_not_apply_yet()
@@ -64,15 +64,15 @@ public class PriceResolverTests
     [Fact]
     public void Prices_from_different_skus_are_rejected()
     {
-        var prices = new[] { Price(1, 12m, Jan), new EffectivePrice(2, skuId: 2, 14m, "EUR", Jun) };
+        var prices = new[] { Price(1, 12m, Jan), new EffectivePrice(2, skuId: 2, 14m, "MXN", Jun) };
 
         Assert.Throws<ArgumentException>(() => PriceResolver.Resolve(prices, Jun));
     }
 
     [Theory]
-    [InlineData(-0.01, "EUR")]
-    [InlineData(0, "EUR")]
-    [InlineData(1.999, "EUR")]
+    [InlineData(-0.01, "MXN")]
+    [InlineData(0, "MXN")]
+    [InlineData(1.999, "MXN")]
     [InlineData(1, "EUX")]
     [InlineData(1, "eur")]
     [InlineData(1, "EURO")]
@@ -82,7 +82,7 @@ public class PriceResolverTests
 
     [Fact]
     public void Amount_beyond_the_stored_precision_is_rejected() =>
-        Assert.Throws<InvalidPriceException>(() => new EffectivePrice(1, 1, 10_000_000_000_000_000m, "EUR", Jan));
+        Assert.Throws<InvalidPriceException>(() => new EffectivePrice(1, 1, 10_000_000_000_000_000m, "MXN", Jan));
 
     [Theory]
     [InlineData(0, 1)]

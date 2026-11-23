@@ -34,7 +34,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
 
         if (withInitialPrice)
         {
-            db.EffectivePrices.Add(new EffectivePrice(0, sku.Id, InitialAmount, "EUR", Today.AddDays(-30)));
+            db.EffectivePrices.Add(new EffectivePrice(0, sku.Id, InitialAmount, "MXN", Today.AddDays(-30)));
             await db.SaveChangesAsync();
         }
 
@@ -42,7 +42,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     }
 
     private static Task<HttpResponseMessage> PostPrice(HttpClient client, int skuId, decimal amount, DateTimeOffset effectiveFrom) =>
-        client.PostAsJsonAsync("/prices", new CreatePriceRequest(skuId, amount, "EUR", Iso(effectiveFrom)));
+        client.PostAsJsonAsync("/prices", new CreatePriceRequest(skuId, amount, "MXN", Iso(effectiveFrom)));
 
     private async Task<decimal> GetPriceAsync(int skuId, DateTimeOffset? asOf = null)
     {
@@ -78,7 +78,7 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
         Assert.True(created!.Id > 0);
         Assert.Equal(skuId, created.SkuId);
         Assert.Equal(12.50m, created.Amount);
-        Assert.Equal("EUR", created.Currency);
+        Assert.Equal("MXN", created.Currency);
         Assert.Equal(Tomorrow, created.EffectiveFrom);
     }
 
@@ -148,9 +148,9 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     }
 
     [Theory]
-    [InlineData(0, "EUR")]
-    [InlineData(-1, "EUR")]
-    [InlineData(1.999, "EUR")]
+    [InlineData(0, "MXN")]
+    [InlineData(-1, "MXN")]
+    [InlineData(1.999, "MXN")]
     [InlineData(1, "eur")]
     [InlineData(1, "EURO")]
     [InlineData(1, "EUX")]
@@ -166,12 +166,12 @@ public class PriceEndpointsTests(MsSqlFixture fixture)
     }
 
     [Theory]
-    [InlineData(null, 1, "EUR", "2099-01-01")]
-    [InlineData(1, null, "EUR", "2099-01-01")]
+    [InlineData(null, 1, "MXN", "2099-01-01")]
+    [InlineData(1, null, "MXN", "2099-01-01")]
     [InlineData(1, 1, null, "2099-01-01")]
-    [InlineData(1, 1, "EUR", null)]
-    [InlineData(1, 1, "EUR", "abc")]
-    [InlineData(1, 1, "EUR", "01/02/2099")]
+    [InlineData(1, 1, "MXN", null)]
+    [InlineData(1, 1, "MXN", "abc")]
+    [InlineData(1, 1, "MXN", "01/02/2099")]
     public async Task Missing_or_malformed_fields_are_bad_request(int? skuId, int? amount, string? currency, string? effectiveFrom)
     {
         var admin = await fixture.AdminClientAsync();

@@ -19,8 +19,8 @@ public class InvoiceModelBuilderTests
     private static Order NewOrder() => Order.Place(
         Alice.Id,
         [
-            (new EffectivePrice(10, 1, 12.50m, "EUR", PlacedAt.AddDays(-1)), 2),
-            (new EffectivePrice(20, 2, 18.00m, "EUR", PlacedAt.AddDays(-1)), 3),
+            (new EffectivePrice(10, 1, 12.50m, "MXN", PlacedAt.AddDays(-1)), 2),
+            (new EffectivePrice(20, 2, 18.00m, "MXN", PlacedAt.AddDays(-1)), 3),
         ],
         null,
         PlacedAt);
@@ -37,7 +37,7 @@ public class InvoiceModelBuilderTests
             ],
             invoice.Lines);
         Assert.Equal(79.00m, invoice.Total);
-        Assert.Equal(("INV-2026-000001", IssuedAt, "Alice", "alice@example.test", "EUR"),
+        Assert.Equal(("INV-2026-000001", IssuedAt, "Alice", "alice@example.test", "MXN"),
             (invoice.InvoiceNumber, invoice.IssuedAt, invoice.CustomerName, invoice.CustomerEmail, invoice.Currency));
     }
 
