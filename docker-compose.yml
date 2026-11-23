@@ -30,6 +30,8 @@ services:
     depends_on:
       - sqlserver
       - minio
+    # The startup bucket check fails while MinIO is still booting; restarting retries until it is up.
+    restart: on-failure
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Server=sqlserver;Database=CoffeeShop;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"

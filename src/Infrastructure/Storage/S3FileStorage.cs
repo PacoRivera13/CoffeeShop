@@ -31,6 +31,9 @@ public sealed class StorageOptions
 /// </summary>
 public sealed class S3FileStorage : IFileStorage, IDisposable
 {
+    /// <summary>S3 rejects presigned URLs valid for longer than 7 days.</summary>
+    public static readonly TimeSpan MaxUrlLifetime = TimeSpan.FromDays(7);
+
     private readonly AmazonS3Client _client;
     private readonly AmazonS3Client _presigner;
     private readonly string _bucket;
@@ -74,6 +77,9 @@ public sealed class S3FileStorage : IFileStorage, IDisposable
 
     public async Task<Uri> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct)
     {
+        if (expires <= TimeSpan.Zero || expires > MaxUrlLifetime)
+            throw new ArgumentOutOfRangeException(nameof(expires), expires, $"Download URLs must expire within {MaxUrlLifetime.TotalDays} days.");
+
         var url = await _presigner.GetPreSignedURLAsync(new GetPreSignedUrlRequest
         {
             BucketName = _bucket,

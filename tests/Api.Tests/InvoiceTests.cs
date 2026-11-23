@@ -138,6 +138,8 @@ public partial class InvoiceTests(MsSqlFixture fixture)
     {
         var (_, order) = await PlacePaidOrderAsync();
         var payload = (OrderPaid)MessageTypes.Deserialize((await PaidMessageAsync(order.Id)).ToEnvelope());
+        var key = Invoice.StorageKeyFor(order.Id);
+        StorageScript.DelayPuts(key, TimeSpan.FromSeconds(1));
 
         await Task.WhenAll(Enumerable.Range(0, 3).Select(async _ =>
         {
@@ -146,8 +148,32 @@ public partial class InvoiceTests(MsSqlFixture fixture)
             await handler.HandleAsync(payload, new MessageContext(Guid.NewGuid()), CancellationToken.None);
         }));
 
+        // All three passed the existence check and uploaded; the two that lost the insert re-uploaded the winner's PDF.
         var invoice = Assert.Single(await InvoicesForAsync(order.Id));
+        Assert.Equal(3 + 2, StorageScript.Puts(key));
         Assert.True(await Storage.ExistsAsync(invoice.StorageKey, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Order_cancelled_before_the_event_is_delivered_gets_no_invoice()
+    {
+        var (customer, order) = await PlacePaidOrderAsync();
+        Assert.Equal(HttpStatusCode.OK, (await customer.PostAsync($"/orders/{order.Id}/cancel", null)).StatusCode);
+
+        await DrainAsync();
+
+        Assert.Empty(await InvoicesForAsync(order.Id));
+        Assert.Equal(0, StorageScript.Puts(Invoice.StorageKeyFor(order.Id)));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-60)]
+    [InlineData(8 * 24 * 3600)]
+    public async Task Download_url_lifetime_must_be_positive_and_at_most_seven_days(int seconds)
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            Storage.GetDownloadUrlAsync("invoices/any.pdf", TimeSpan.FromSeconds(seconds), CancellationToken.None));
     }
 
     [Fact]

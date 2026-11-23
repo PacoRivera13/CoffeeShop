@@ -27,8 +27,14 @@ public sealed class StorageScript
 {
     private readonly ConcurrentDictionary<string, int> _failuresLeft = new();
     private readonly ConcurrentDictionary<string, int> _puts = new();
+    private readonly ConcurrentDictionary<string, TimeSpan> _delays = new();
 
     public void FailPuts(string key, int times) => _failuresLeft[key] = times;
+
+    /// <summary>Slows uploads of the key so concurrent handlers all get past their checks before any of them inserts.</summary>
+    public void DelayPuts(string key, TimeSpan delay) => _delays[key] = delay;
+
+    public TimeSpan DelayFor(string key) => _delays.GetValueOrDefault(key);
 
     public int Puts(string key) => _puts.GetValueOrDefault(key);
 
@@ -46,10 +52,12 @@ public sealed class StorageScript
 /// <summary>Decorates the real storage so tests can inject upload failures.</summary>
 public sealed class FlakyFileStorage(IFileStorage inner, StorageScript script) : IFileStorage
 {
-    public Task PutAsync(string key, Stream content, string contentType, CancellationToken ct)
+    public async Task PutAsync(string key, Stream content, string contentType, CancellationToken ct)
     {
         script.BeforePut(key);
-        return inner.PutAsync(key, content, contentType, ct);
+        if (script.DelayFor(key) is { } delay && delay > TimeSpan.Zero)
+            await Task.Delay(delay, ct);
+        await inner.PutAsync(key, content, contentType, ct);
     }
 
     public Task<bool> ExistsAsync(string key, CancellationToken ct) => inner.ExistsAsync(key, ct);

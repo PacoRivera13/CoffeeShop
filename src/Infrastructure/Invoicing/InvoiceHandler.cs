@@ -27,6 +27,13 @@ public sealed class InvoiceHandler(
             return;
 
         var order = await db.Orders.AsNoTracking().Include(o => o.Lines).SingleAsync(o => o.Id == message.OrderId, ct);
+        if (order.Status == OrderStatus.Cancelled)
+        {
+            // Paid and then cancelled before this event was delivered: there is nothing left to receipt.
+            logger.LogInformation("Order {OrderId} was cancelled after payment; no invoice generated", order.Id);
+            return;
+        }
+
         var customer = await db.Customers.AsNoTracking().SingleAsync(c => c.Id == order.CustomerId, ct);
         var skuIds = order.Lines.Select(l => l.SkuId).ToList();
         var skus = await db.Skus.AsNoTracking()

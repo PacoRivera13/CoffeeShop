@@ -56,3 +56,4 @@
 - The invoice number is drawn from the SQL sequence before rendering because it is printed on the PDF; failed attempts leave gaps.
 - A concurrent duplicate invoice delivery re-uploads the PDF with the winning row's number, so the stored file always matches the row.
 - Compose does not run migrations; apply them with dotnet ef against the compose SQL Server before starting api.
+- The invoice handler skips orders cancelled before OrderPaid was delivered; Development still requires MinIO at startup (fail fast, like JWT).
