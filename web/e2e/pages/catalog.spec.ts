@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
+  cartLine,
   expectAccessibleInBothSchemes,
+  expectMinTouchTarget,
   expectNoHorizontalOverflow,
   mockCatalog,
+  seedCart,
   signInAs,
 } from '../support/helpers';
 
@@ -86,6 +89,33 @@ test.describe('Catalog page', () => {
 
       await expect(page.getByRole('link', { name: 'Cart, 0 items' })).toBeVisible();
       await expect(page.getByTestId('cart-summary-bar')).toHaveCount(0);
+    });
+
+    test('a SKU already at 50 units is not added again', async ({ page }) => {
+      await seedCart(page, [cartLine(11, 50)]);
+      await mockCatalog(page);
+      await page.goto('/');
+      const ethiopia = page.getByRole('article', { name: 'Ethiopia Yirgacheffe' });
+      await expect(ethiopia.getByTestId('price')).toContainText('300.00');
+
+      await ethiopia.getByRole('button', { name: 'Add to cart' }).click();
+
+      await expect(page.getByText('Ethiopia Yirgacheffe is already at the maximum of 50 in your cart')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+    });
+
+    test('SKU options are at least 44px tall on mobile', async ({ page }, testInfo) => {
+      await mockCatalog(page);
+      await page.goto('/');
+      const ethiopia = page.getByRole('article', { name: 'Ethiopia Yirgacheffe' });
+      await expect(ethiopia.getByTestId('price')).toContainText('300.00');
+
+      const option = ethiopia.getByRole('radio', { name: '1000 g' });
+      if (testInfo.project.name === 'mobile') {
+        await expectMinTouchTarget(option);
+      } else {
+        await expect(option).toBeVisible();
+      }
     });
 
     test('has no horizontal overflow', async ({ page }) => {

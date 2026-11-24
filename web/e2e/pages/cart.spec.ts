@@ -95,6 +95,28 @@ test.describe('Cart page', () => {
     });
   });
 
+  test('lines are locked while the order is being placed', async ({ page }) => {
+    await seedCart(page, [cartLine(11, 2)]);
+    let release!: () => void;
+    const placed = new Promise<void>((resolve) => (release = resolve));
+    await mockApi(page, 'GET', '/orders/44', 200, order({ id: 44 }));
+    await mockApi(page, 'GET', '/products', 200, products);
+    await page.route('**/api/orders', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      await placed;
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(order({ id: 44 })) });
+    });
+    await page.goto('/cart');
+
+    await page.getByRole('button', { name: 'Checkout' }).click();
+
+    await expect(page.getByTestId('checkout-button')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Increase quantity' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Remove Ethiopia Yirgacheffe from the cart' })).toBeDisabled();
+    release();
+    await expect(page).toHaveURL('/orders/44');
+  });
+
   test('a stock conflict names the product and the grams left, and keeps the cart', async ({ page }) => {
     await seedCart(page, [cartLine(12, 1)]);
     await mockCheckout(page, [{ status: 409, body: insufficientStock }]);

@@ -41,6 +41,11 @@ export const ORDERS_PAGE_SIZE = 10;
         <app-empty-state icon="receipt_long" title="No orders yet" message="Orders you place will be listed here.">
           <a mat-flat-button routerLink="/">Browse coffee</a>
         </app-empty-state>
+      } @else if (orders.value().items.length === 0) {
+        <!-- A ?page= past the end, e.g. from an old link. -->
+        <app-empty-state icon="find_in_page" title="No orders on this page" message="This page is past your last order.">
+          <a mat-flat-button routerLink="/orders">Go to the first page</a>
+        </app-empty-state>
       } @else {
         @if (compact()) {
           <app-order-card-list [orders]="orders.value().items" />

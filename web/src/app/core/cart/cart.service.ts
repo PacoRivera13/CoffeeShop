@@ -44,12 +44,16 @@ export class CartService {
     });
   }
 
-  /** Adds qty units of an item and returns a function that takes exactly those units back out. */
-  add(item: CartItem, qty = 1): () => void {
+  /**
+   * Adds qty units of an item and returns a function that takes exactly those units back out, or null when the
+   * line is already at MAX_QTY and nothing was added.
+   */
+  add(item: CartItem, qty = 1): (() => void) | null {
     const existing = this.state().find((line) => line.skuId === item.skuId);
     const before = existing?.qty ?? 0;
     const after = clampQty(before + qty);
     const added = after - before;
+    if (added === 0) return null;
     if (existing) {
       this.write(this.state().map((line) => (line.skuId === item.skuId ? { ...item, qty: after } : line)));
     } else {
@@ -57,7 +61,7 @@ export class CartService {
     }
     return () => {
       const line = this.state().find((l) => l.skuId === item.skuId);
-      if (!line || added === 0) return;
+      if (!line) return;
       const remaining = line.qty - added;
       if (remaining < MIN_QTY) this.remove(item.skuId);
       else this.setQty(item.skuId, remaining);
@@ -127,6 +131,7 @@ function isCartLine(value: unknown): value is CartLine {
     typeof line['skuId'] === 'number' &&
     typeof line['productId'] === 'number' &&
     typeof line['name'] === 'string' &&
+    typeof line['roast'] === 'string' &&
     typeof line['grind'] === 'string' &&
     typeof line['sizeG'] === 'number' &&
     typeof line['unitPrice'] === 'number' &&

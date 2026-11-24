@@ -53,6 +53,15 @@ describe('QuantityStepperComponent', () => {
     await expect.element(page.getByTestId('quantity-value')).toHaveTextContent('50');
   });
 
+  it('locks both buttons when disabled', async () => {
+    const { fixture } = await render(3);
+    fixture.componentRef.setInput('disabled', true);
+    await fixture.whenStable();
+
+    await expect.element(page.getByTestId('quantity-increase')).toBeDisabled();
+    await expect.element(page.getByTestId('quantity-decrease')).toBeDisabled();
+  });
+
   it('labels the group for assistive technology', async () => {
     await render(1);
 

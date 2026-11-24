@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, LOCALE_ID, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -209,7 +209,7 @@ export class OrderDetailPageComponent {
   private readonly api = inject(ApiRx);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly datePipe = new DatePipe('en-US');
+  private readonly datePipe = new DatePipe(inject(LOCALE_ID));
 
   /** Route parameter :id. */
   readonly idParam = input.required<string>({ alias: 'id' });

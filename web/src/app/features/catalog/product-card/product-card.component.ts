@@ -68,7 +68,9 @@ let nextId = 0;
               </span>
             }
             @default {
-              <span class="muted" data-testid="price-none">Choose a grind and size</span>
+              @if (product().skus.length > 0) {
+                <span class="muted" data-testid="price-none">Choose a grind and size</span>
+              }
             }
           }
         </div>

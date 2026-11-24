@@ -50,6 +50,7 @@ describe('CartService', () => {
     const cart = create();
     cart.add(ITEM, MAX_QTY + 10);
     expect(cart.lines()[0].qty).toBe(MAX_QTY);
+    expect(cart.add(ITEM)).toBeNull();
 
     cart.setQty(11, 0);
     expect(cart.lines()[0].qty).toBe(1);
@@ -63,11 +64,11 @@ describe('CartService', () => {
     cart.add(ITEM, 2);
 
     const undo = cart.add(ITEM, 3);
-    undo();
+    undo!();
     expect(cart.lines()[0].qty).toBe(2);
 
     const undoNew = cart.add(OTHER);
-    undoNew();
+    undoNew!();
     expect(cart.lines().map((l) => l.skuId)).toEqual([11]);
   });
 
@@ -86,7 +87,11 @@ describe('CartService', () => {
     expect(create().lines()).toEqual([]);
 
     TestBed.resetTestingModule();
-    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify([{ skuId: 'x' }, { ...ITEM, qty: 0 }]));
+    const { roast: _roast, ...withoutRoast } = ITEM;
+    sessionStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify([{ skuId: 'x' }, { ...ITEM, qty: 0 }, { ...withoutRoast, qty: 1 }]),
+    );
     expect(create().lines()).toEqual([]);
   });
 

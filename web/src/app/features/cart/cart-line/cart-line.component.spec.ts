@@ -16,9 +16,10 @@ const LINE: CartLine = {
 };
 
 describe('CartLineComponent', () => {
-  async function render(line: CartLine) {
+  async function render(line: CartLine, disabled = false) {
     const fixture = TestBed.createComponent(CartLineComponent);
     fixture.componentRef.setInput('line', line);
+    fixture.componentRef.setInput('disabled', disabled);
     const qtyChange = vi.fn();
     const remove = vi.fn();
     fixture.componentInstance.qtyChange.subscribe(qtyChange);
@@ -52,6 +53,14 @@ describe('CartLineComponent', () => {
 
     await expect.element(page.getByRole('button', { name: 'Increase quantity' })).toBeDisabled();
     await expect.element(page.getByRole('button', { name: 'Decrease quantity' })).toBeEnabled();
+  });
+
+  it('locks quantity and removal while the cart is checked out', async () => {
+    await render(LINE, true);
+
+    await expect.element(page.getByRole('button', { name: 'Increase quantity' })).toBeDisabled();
+    await expect.element(page.getByRole('button', { name: 'Decrease quantity' })).toBeDisabled();
+    await expect.element(page.getByRole('button', { name: 'Remove Ethiopia Yirgacheffe from the cart' })).toBeDisabled();
   });
 
   it('removes the line', async () => {

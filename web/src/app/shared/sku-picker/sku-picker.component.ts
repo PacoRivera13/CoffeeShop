@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SkuResponse } from '../../api/models/sku-response';
-
-const GRIND_LABELS: Record<string, string> = { WholeBean: 'Whole bean', Ground: 'Ground' };
+import { grindLabel } from '../../core/catalog/catalog.service';
 
 /** Picks a SKU by grind and bag size; emits once both are chosen and that combination exists. */
 @Component({
@@ -81,9 +80,7 @@ export class SkuPickerComponent {
   // The OpenAPI document types numbers as number | string (the API also reads numeric strings), so normalize.
   protected readonly sizes = computed(() => [...new Set(this.skus().map((s) => Number(s.sizeG)))].sort((a, b) => a - b));
 
-  protected grindLabel(grind: string): string {
-    return GRIND_LABELS[grind] ?? grind;
-  }
+  protected readonly grindLabel = grindLabel;
 
   protected isAvailable(grind: string | null, size: number | null): boolean {
     return this.skus().some((s) => (grind === null || s.grind === grind) && (size === null || Number(s.sizeG) === size));

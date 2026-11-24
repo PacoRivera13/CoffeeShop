@@ -39,6 +39,7 @@ import { PageHeaderComponent } from '../../shared/page-header/page-header.compon
             <li>
               <app-cart-line
                 [line]="line"
+                [disabled]="pending()"
                 (qtyChange)="cart.setQty(line.skuId, $event)"
                 (remove)="cart.remove(line.skuId)"
               />

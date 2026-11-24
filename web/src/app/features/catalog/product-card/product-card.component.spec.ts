@@ -72,6 +72,18 @@ describe('ProductCardComponent', () => {
     await expect.element(page.getByRole('button', { name: 'Add to cart' })).toBeDisabled();
   });
 
+  it('shows no SKU hint for a product without SKUs', async () => {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ProductCardComponent);
+    fixture.componentRef.setInput('product', { ...products[0], skus: [] });
+    await fixture.whenStable();
+
+    await expect.element(page.getByTestId('sku-picker-empty')).toBeVisible();
+    await expect.element(page.getByTestId('price-none')).not.toBeInTheDocument();
+    await expect.element(page.getByRole('button', { name: 'Add to cart' })).toBeDisabled();
+  });
+
   it('emits the chosen SKU with its price', async () => {
     const { fixture, added } = await render();
     priceRequest(11).flush(price(11, 300));

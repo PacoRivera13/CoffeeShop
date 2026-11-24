@@ -1,5 +1,6 @@
 // Roastery design system: Angular Material 3 theme, cream surfaces, self-hosted fonts and global rules.
 // Components use only the --mat-sys-* tokens defined here, never raw colors.
+@use '@angular/cdk' as cdk;
 @use '@angular/material' as mat;
 @use 'styles/theme-colors' as roastery;
 @use 'styles/breakpoints' as bp;
@@ -94,7 +95,17 @@ a {
   outline-offset: 2px;
 }
 
+// .cdk-visually-hidden: text for assistive technology only (status messages, timeline states).
+@include cdk.a11y-visually-hidden();
+
 // Touch targets of at least 44x44 on compact screens.
+// Button toggles (the SKU picker) are not .mat-mdc-button-base, so their height comes from the token.
+@include bp.compact {
+  html {
+    @include mat.button-toggle-overrides((height: 44px));
+  }
+}
+
 @include bp.compact {
   .mat-mdc-button-base,
   .touch-target {

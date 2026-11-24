@@ -74,6 +74,17 @@ test.describe('Orders page', () => {
     await expect(page.getByRole('heading', { name: 'No orders yet' })).toBeVisible();
   });
 
+  test('a page past the last order offers the first page', async ({ page }) => {
+    await mockOrders(page, { 9: orderPage([], 9, 12), 1: firstPage });
+    await page.goto('/orders?page=9');
+
+    await expect(page.getByRole('heading', { name: 'No orders on this page' })).toBeVisible();
+    await page.getByRole('link', { name: 'Go to the first page' }).click();
+
+    await expect(page).toHaveURL('/orders');
+    await expect(page.getByRole('link', { name: /Order #12/ })).toBeVisible();
+  });
+
   test('has no horizontal overflow', async ({ page }) => {
     await mockOrders(page, { 1: firstPage });
     await page.goto('/orders');

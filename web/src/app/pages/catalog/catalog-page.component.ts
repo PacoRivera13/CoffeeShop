@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { rxResource } from '@angular/core/rxjs-interop';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CartItem, CartService } from '../../core/cart/cart.service';
+import { CartItem, CartService, MAX_QTY } from '../../core/cart/cart.service';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ProductCardComponent } from '../../features/catalog/product-card/product-card.component';
 import { EmptyStateComponent } from '../../shared/empty-state/empty-state.component';
@@ -78,6 +78,12 @@ export class CatalogPageComponent {
 
   protected addToCart(item: CartItem): void {
     const undo = this.cart.add(item);
+    if (undo === null) {
+      this.snackBar.open(`${item.name} is already at the maximum of ${MAX_QTY} in your cart`, undefined, {
+        duration: 5000,
+      });
+      return;
+    }
     this.snackBar
       .open(`${item.name} added to cart`, 'Undo', { duration: 5000 })
       .onAction()

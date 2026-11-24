@@ -69,7 +69,7 @@ describe('InvoiceButtonComponent', () => {
     expect(byTestId(fixture, 'invoice-spinner')).toBeNull();
     expect(byTestId(fixture, 'invoice-link')!.getAttribute('href')).toBe(invoice.url);
     expect(byTestId(fixture, 'invoice-status')!.getAttribute('aria-live')).toBe('polite');
-    expect(byTestId(fixture, 'invoice-status')!.textContent).toMatch(/opened in a new tab/);
+    expect(byTestId(fixture, 'invoice-status')!.textContent).toMatch(/is ready\. If no new tab opened, use the Open invoice link/);
   });
 
   it(`gives up after ${INVOICE_MAX_ATTEMPTS} attempts and reports it`, async () => {

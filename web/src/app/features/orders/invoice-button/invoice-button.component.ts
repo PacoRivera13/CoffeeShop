@@ -38,7 +38,7 @@ import { INVOICE_MAX_ATTEMPTS, InvoicePollState, pollInvoice } from '../../../co
         Open invoice {{ invoice.invoiceNumber }}
       </a>
     }
-    <span class="visually-hidden" aria-live="polite" data-testid="invoice-status">{{ statusText() }}</span>
+    <span class="cdk-visually-hidden" aria-live="polite" data-testid="invoice-status">{{ statusText() }}</span>
   `,
   styles: `
     :host {
@@ -58,14 +58,6 @@ import { INVOICE_MAX_ATTEMPTS, InvoicePollState, pollInvoice } from '../../../co
     mat-spinner {
       display: inline-block;
       margin-inline-end: 8px;
-    }
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
     }
   `,
 })
@@ -93,7 +85,8 @@ export class InvoiceButtonComponent {
           ? 'Preparing the invoice…'
           : `Still preparing the invoice, attempt ${state.attempt} of ${INVOICE_MAX_ATTEMPTS}…`;
       case 'ready':
-        return `Invoice ${state.invoice.invoiceNumber} opened in a new tab.`;
+        // The popup may have been blocked (polling outlives the click), so point to the link as well.
+        return `Invoice ${state.invoice.invoiceNumber} is ready. If no new tab opened, use the Open invoice link.`;
       case 'error':
         return 'The invoice could not be downloaded.';
       default:

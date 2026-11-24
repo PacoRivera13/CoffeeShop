@@ -14,7 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
         type="button"
         aria-label="Decrease quantity"
         data-testid="quantity-decrease"
-        [disabled]="current() <= min()"
+        [disabled]="disabled() || current() <= min()"
         (click)="step(-1)"
       >
         <mat-icon aria-hidden="true">remove</mat-icon>
@@ -25,7 +25,7 @@ import { MatIconModule } from '@angular/material/icon';
         type="button"
         aria-label="Increase quantity"
         data-testid="quantity-increase"
-        [disabled]="current() >= max()"
+        [disabled]="disabled() || current() >= max()"
         (click)="step(1)"
       >
         <mat-icon aria-hidden="true">add</mat-icon>
@@ -49,11 +49,14 @@ export class QuantityStepperComponent {
   readonly value = input(1);
   readonly min = input(1);
   readonly max = input(50);
+  /** Locks both buttons, e.g. while the cart is being checked out. */
+  readonly disabled = input(false);
   readonly valueChange = output<number>();
 
   protected readonly current = linkedSignal(() => this.clamp(this.value()));
 
   protected step(delta: number): void {
+    if (this.disabled()) return;
     const next = this.clamp(this.current() + delta);
     if (next === this.current()) return;
     this.current.set(next);

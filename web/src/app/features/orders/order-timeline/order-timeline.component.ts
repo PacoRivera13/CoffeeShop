@@ -59,7 +59,7 @@ export function timelineSteps(status: string): TimelineStep[] {
         >
           <mat-icon class="icon" aria-hidden="true">{{ icons[step.state] }}</mat-icon>
           <span class="label">{{ step.label }}</span>
-          <span class="visually-hidden">({{ stateText[step.state] }})</span>
+          <span class="cdk-visually-hidden">({{ stateText[step.state] }})</span>
         </li>
       }
     </ol>
@@ -97,14 +97,6 @@ export function timelineSteps(status: string): TimelineStep[] {
     .step[data-state='cancelled'] {
       color: var(--mat-sys-error);
       font-weight: 600;
-    }
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
     }
   `,
 })

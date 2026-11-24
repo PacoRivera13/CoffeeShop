@@ -127,7 +127,7 @@ test.describe('Order detail page', () => {
       'href',
       invoice.url,
     );
-    await expect(page.getByTestId('invoice-status')).toContainText('opened in a new tab');
+    await expect(page.getByTestId('invoice-status')).toContainText('is ready');
     expect(calls).toBe(3);
     expect(await openedWindows(page)).toEqual([invoice.url]);
   });

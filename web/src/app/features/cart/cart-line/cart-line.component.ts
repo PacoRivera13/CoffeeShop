@@ -27,6 +27,7 @@ import { QuantityStepperComponent } from '../../../shared/quantity-stepper/quant
         [value]="line().qty"
         [min]="minQty"
         [max]="maxQty"
+        [disabled]="disabled()"
         (valueChange)="qtyChange.emit($event)"
       />
       <div class="total" data-testid="cart-line-total">
@@ -37,6 +38,7 @@ import { QuantityStepperComponent } from '../../../shared/quantity-stepper/quant
         type="button"
         class="remove"
         data-testid="cart-line-remove"
+        [disabled]="disabled()"
         [attr.aria-label]="'Remove ' + line().name + ' from the cart'"
         (click)="remove.emit()"
       >
@@ -87,6 +89,8 @@ import { QuantityStepperComponent } from '../../../shared/quantity-stepper/quant
 })
 export class CartLineComponent {
   readonly line = input.required<CartLine>();
+  /** True while the cart is being checked out: the order already holds these quantities. */
+  readonly disabled = input(false);
   readonly qtyChange = output<number>();
   readonly remove = output<void>();
 
