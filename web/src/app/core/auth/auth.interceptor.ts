@@ -5,9 +5,10 @@ import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 const API_PREFIX = '/api/';
-const AUTH_PREFIX = '/api/auth/';
+/** Endpoints called without a session, where a 401 means bad credentials rather than an ended session. */
+const SESSIONLESS_URLS = ['/api/auth/login', '/api/auth/register'];
 
-/** Sends the bearer token to the API; a 401 elsewhere than the auth endpoints ends the session. */
+/** Sends the bearer token to the API; a 401 from any endpoint that needs a session ends it. */
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -20,7 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(authorized).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse && error.status === 401 && !request.url.startsWith(AUTH_PREFIX)) {
+      if (error instanceof HttpErrorResponse && error.status === 401 && !SESSIONLESS_URLS.includes(request.url)) {
         auth.logout();
         void router.navigate(['/login']);
       }

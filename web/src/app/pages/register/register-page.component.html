@@ -9,7 +9,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" autocomplete="name" data-testid="register-name" />
-          @if (form.controls.name.hasError('required')) {
+          @if (form.controls.name.hasError('required') || form.controls.name.hasError('pattern')) {
             <mat-error>Name is required.</mat-error>
           } @else if (form.controls.name.hasError('maxlength')) {
             <mat-error>Name must have at most {{ nameMaxLength }} characters.</mat-error>

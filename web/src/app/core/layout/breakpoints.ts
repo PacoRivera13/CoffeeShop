@@ -6,19 +6,26 @@ export interface BreakpointQueries {
 
 /**
  * Media queries for the CDK BreakpointObserver, built from the custom properties styles.scss publishes from
- * src/styles/_breakpoints.scss, so CSS and TypeScript never disagree.
+ * src/styles/_breakpoints.scss, so CSS and TypeScript never disagree. Uses min/max-width, like the Sass mixins,
+ * because range syntax needs Safari 16.4.
  */
 export function breakpointQueries(doc: Document = document): BreakpointQueries {
   const style = getComputedStyle(doc.documentElement);
-  const medium = style.getPropertyValue('--bp-medium-min').trim();
-  const expanded = style.getPropertyValue('--bp-expanded-min').trim();
-  if (!medium || !expanded) {
-    throw new Error('Breakpoint custom properties are missing: is styles.scss loaded?');
-  }
+  const medium = parsePixels(style.getPropertyValue('--bp-medium-min'));
+  const expanded = parsePixels(style.getPropertyValue('--bp-expanded-min'));
 
   return {
-    compact: `(width < ${medium})`,
-    medium: `(${medium} <= width < ${expanded})`,
-    expanded: `(width >= ${expanded})`,
+    compact: `(max-width: ${medium - 0.02}px)`,
+    medium: `(min-width: ${medium}px) and (max-width: ${expanded - 0.02}px)`,
+    expanded: `(min-width: ${expanded}px)`,
   };
+}
+
+function parsePixels(value: string): number {
+  const trimmed = value.trim();
+  const pixels = Number.parseFloat(trimmed);
+  if (!trimmed.endsWith('px') || Number.isNaN(pixels)) {
+    throw new Error(`Breakpoint custom property '${trimmed}' is missing or not in px: is styles.scss loaded?`);
+  }
+  return pixels;
 }

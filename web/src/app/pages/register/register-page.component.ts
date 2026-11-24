@@ -37,7 +37,8 @@ export class RegisterPageComponent {
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(NAME_MAX_LENGTH)],
+      // The pattern rejects names made only of spaces, which the API trims and refuses.
+      validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(NAME_MAX_LENGTH)],
     }),
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
     password: new FormControl('', {
@@ -56,12 +57,22 @@ export class RegisterPageComponent {
 
     this.submitting.set(true);
     this.error.set(null);
+    const { name, email, password } = this.form.getRawValue();
     try {
-      const { name, email, password } = this.form.getRawValue();
       await this.auth.register(name.trim(), email, password);
-      await this.router.navigateByUrl(this.auth.homeUrl());
     } catch (error) {
       this.error.set(error);
+      this.submitting.set(false);
+      return;
+    }
+
+    // The account exists now: if signing in fails, send the user to sign in rather than to a register retry
+    // that could only answer "Email already registered".
+    try {
+      await this.auth.login(email, password);
+      await this.router.navigateByUrl(this.auth.homeUrl());
+    } catch {
+      await this.router.navigate(['/login'], { queryParams: { registered: 'true' } });
     } finally {
       this.submitting.set(false);
     }

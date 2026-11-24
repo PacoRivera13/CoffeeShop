@@ -39,6 +39,19 @@ describe('AppShellComponent', () => {
     await expect.element(page.getByRole('link', { name: 'Shop' })).toBeVisible();
   });
 
+  it('closes the drawer when the screen widens to the expanded layout', async () => {
+    const { fixture } = await render('customer', 360);
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await fixture.whenStable();
+    await expect.element(page.getByTestId('drawer-link')).toBeVisible();
+
+    await page.viewport(1280, 800);
+    await fixture.whenStable();
+
+    await expect.element(page.getByTestId('drawer-link')).not.toBeVisible();
+    await expect.element(page.getByTestId('inline-nav')).toBeVisible();
+  });
+
   it('on expanded screens shows inline navigation and no menu button', async () => {
     await render('customer', 1280);
 

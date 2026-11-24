@@ -3,6 +3,10 @@
     <mat-card-content>
       <h1>Sign in</h1>
 
+      @if (registered() === 'true') {
+        <p class="notice" role="status" data-testid="registered-notice">Your account was created. Sign in to continue.</p>
+      }
+
       <app-error-banner [error]="error()" />
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="login-form">

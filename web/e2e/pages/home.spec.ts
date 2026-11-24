@@ -18,6 +18,16 @@ test.describe('Home page', () => {
     await expect(page.getByText(`Signed in as ${customer.email}`)).toBeVisible();
   });
 
+  test('a saved theme is applied before the app starts', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('roastery.theme', 'dark'));
+    await page.route('**/main-*.js', (route) => route.abort());
+    await page.route('**/main.js', (route) => route.abort());
+
+    await page.goto('/login');
+
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
+
   test('has no horizontal overflow', async ({ page }) => {
     await signInAs(page, 'Customer');
     await page.goto('/');

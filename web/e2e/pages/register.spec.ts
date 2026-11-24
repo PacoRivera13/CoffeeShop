@@ -24,6 +24,17 @@ test.describe('Register page', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();
   });
 
+  test('if signing in fails after registering, the user is sent to sign in instead of retrying', async ({ page }) => {
+    await mockApi(page, 'POST', '/auth/register', 201, registerResponse);
+    await page.route('**/api/auth/login', (route) => route.abort());
+
+    await fillForm(page);
+    await page.getByRole('button', { name: 'Create account' }).click();
+
+    await expect(page).toHaveURL('/login?registered=true');
+    await expect(page.getByRole('status')).toContainText('Your account was created');
+  });
+
   test('a weak password shows the server validation message', async ({ page }) => {
     await mockApi(page, 'POST', '/auth/register', 400, weakPassword);
 
@@ -53,6 +64,10 @@ test.describe('Register page', () => {
     await page.getByLabel('Password').fill('short');
     await page.getByLabel('Password').blur();
     await expect(page.getByText('Password must have at least 8 characters.')).toBeVisible();
+
+    await page.getByLabel('Name').fill('   ');
+    await page.getByLabel('Name').blur();
+    await expect(page.getByText('Name is required.')).toBeVisible();
   });
 
   test('has no horizontal overflow', async ({ page }) => {

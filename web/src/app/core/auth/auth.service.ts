@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Api } from '../../api/api';
 import { login } from '../../api/fn/auth/login';
 import { register } from '../../api/fn/auth/register';
@@ -11,22 +11,27 @@ export const ADMIN_ROLE = 'Admin';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(Api);
-  private readonly accessToken = signal<string | null>(readStoredToken());
+  private readonly accessToken = signal<string | null>(null);
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly claims = computed(() => {
     const token = this.accessToken();
     return token ? decodeClaims(token) : null;
   });
-  readonly isAuthenticated = computed(() => {
-    const claims = this.claims();
-    return claims !== null && claims.exp * 1000 > Date.now();
-  });
+  // Expiry is enforced by the timer in store(), which clears the token when it lapses; a computed cannot
+  // react to the clock on its own.
+  readonly isAuthenticated = computed(() => this.claims() !== null);
   readonly isAdmin = computed(() => this.isAuthenticated() && this.claims()!.roles.includes(ADMIN_ROLE));
   readonly email = computed(() => (this.isAuthenticated() ? this.claims()!.email : null));
 
-  /** The token to send, or null once it is missing or expired. */
+  constructor() {
+    this.store(readStoredToken());
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.expiryTimer));
+  }
+
+  /** The token to send, or null when signed out. */
   token(): string | null {
-    return this.isAuthenticated() ? this.accessToken() : null;
+    return this.accessToken();
   }
 
   /** Where a user lands after signing in. */
@@ -39,9 +44,9 @@ export class AuthService {
     this.store(response.accessToken);
   }
 
+  /** Creates the account only; signing in is a separate step, so a failure there never hides a created account. */
   async register(name: string, email: string, password: string): Promise<void> {
     await this.api.invoke(register, { body: { name, email, password } });
-    await this.login(email, password);
   }
 
   logout(): void {
@@ -49,9 +54,17 @@ export class AuthService {
   }
 
   private store(token: string | null): void {
-    this.accessToken.set(token);
+    clearTimeout(this.expiryTimer);
+
+    const claims = token ? decodeClaims(token) : null;
+    const msLeft = claims ? claims.exp * 1000 - Date.now() : 0;
+    const valid = token !== null && claims !== null && msLeft > 0;
+
+    this.accessToken.set(valid ? token : null);
+    if (valid) this.expiryTimer = setTimeout(() => this.store(null), msLeft);
+
     try {
-      if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token);
+      if (valid) sessionStorage.setItem(SESSION_STORAGE_KEY, token);
       else sessionStorage.removeItem(SESSION_STORAGE_KEY);
     } catch {
       // Without storage the session simply ends with the tab.

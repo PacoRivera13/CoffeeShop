@@ -71,3 +71,5 @@
 - Breakpoints live only in _breakpoints.scss; TypeScript reads them through CSS custom properties to build CDK BreakpointObserver queries.
 - The drawer uses mat-button links instead of mat-nav-list, whose module pulls @angular/forms into the initial bundle (about 78 kB).
 - npm 11 install scripts stay blocked (esbuild, lmdb, msgpackr-extract, @parcel/watcher); their prebuilt binaries are enough.
+- index.html carries a small inline script that applies the saved theme before first paint; a future Content-Security-Policy must allow it by hash.
+- The web session ends on a timer at the token expiry; register no longer signs in on its own, the page does, and a failed sign-in after registering sends the user to /login.

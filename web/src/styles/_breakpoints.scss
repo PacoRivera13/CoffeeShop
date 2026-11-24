@@ -3,29 +3,32 @@
 //   compact  < 600px
 //   medium   600px - 839px
 //   expanded >= 840px
+// min-width/max-width rather than range syntax (width < 600px), which Safari only supports from 16.4.
 $medium-min: 600px;
 $expanded-min: 840px;
+$compact-max: $medium-min - 0.02px;
+$medium-max: $expanded-min - 0.02px;
 
 @mixin compact {
-  @media (width < $medium-min) {
+  @media (max-width: $compact-max) {
     @content;
   }
 }
 
 @mixin medium {
-  @media ($medium-min <= width < $expanded-min) {
+  @media (min-width: $medium-min) and (max-width: $medium-max) {
     @content;
   }
 }
 
 @mixin medium-up {
-  @media (width >= $medium-min) {
+  @media (min-width: $medium-min) {
     @content;
   }
 }
 
 @mixin expanded {
-  @media (width >= $expanded-min) {
+  @media (min-width: $expanded-min) {
     @content;
   }
 }

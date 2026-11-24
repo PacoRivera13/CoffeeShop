@@ -1,10 +1,10 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { map } from 'rxjs';
@@ -46,6 +46,15 @@ export class AppShellComponent {
       .pipe(map((state) => state.matches)),
     { initialValue: false },
   );
+
+  private readonly drawer = viewChild<MatSidenav>('drawer');
+
+  constructor() {
+    // The drawer only exists for compact screens: close it when the layout widens, or it would cover the page.
+    effect(() => {
+      if (!this.compact()) void this.drawer()?.close();
+    });
+  }
 
   protected readonly links = computed<NavLink[]>(() => {
     if (this.auth.isAdmin()) return [{ label: 'Shop', path: '/' }, { label: 'Admin', path: '/admin' }];

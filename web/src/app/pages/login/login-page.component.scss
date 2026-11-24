@@ -1,3 +1,11 @@
 @use 'styles/auth-page';
 
 @include auth-page.auth-page;
+
+.notice {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}

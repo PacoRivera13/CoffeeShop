@@ -29,6 +29,8 @@ export class LoginPageComponent {
 
   /** Bound from the query string by the router; only same-site paths are honoured. */
   readonly returnUrl = input<string>();
+  /** Set when registration succeeded but the automatic sign-in did not. */
+  readonly registered = input<string>();
 
   protected readonly form = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
