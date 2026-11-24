@@ -31,6 +31,20 @@ Order.idempotency_key: same Idempotency-Key from the same customer -> original o
 - Handlers with external I/O (e.g. uploads) run outside a transaction (IRunsOutsideTransaction) and are idempotent through a deterministic key + unique constraint.
 - All file access goes through IFileStorage; object keys are deterministic (invoices/{orderId}.pdf) and invoice generation is idempotent.
 - Download URLs are presigned and short-lived (5 minutes) and are signed for the public endpoint; API responses never expose the bucket, storage key fields or the internal storage endpoint.
+- Every web component has a colocated Vitest browser spec (`<name>.component.spec.ts`, real Chromium).
+- Every routed page has a Playwright spec (`web/e2e/pages/<page>.spec.ts`) with the API mocked, run on the desktop and mobile projects.
+- Web tests use typed fixtures from the generated API models (`web/testing/fixtures`), locators by role or test id only, and no fixed waits.
+- `npm run test:coverage-check` must pass: no component without its spec, no skipped or focused tests.
+
+## Design
+- Angular Material 3 + CDK only; no other UI kit, no Tailwind.
+- Colors only through theme tokens (`--mat-sys-*`); no hex values in components.
+- Mobile-first, using the single breakpoints file `web/src/styles/_breakpoints.scss` (compact < 600, medium 600-839, expanded >= 840).
+- Touch targets of at least 44x44 on compact screens; focus always visible.
+- Color is never the only signal (icons and text accompany it).
+- Respect prefers-reduced-motion.
+- Fonts (Fraunces, Inter) and Material Symbols are self-hosted through npm; no CDN or Google Fonts requests.
+- Tables become cards on compact screens.
 
 ## Work (token saving)
 - Do not explain the code or show whole files; summarize changes in at most 5 lines.

@@ -1,0 +1,115 @@
+// Roastery design system: Angular Material 3 theme, cream surfaces, self-hosted fonts and global rules.
+// Components use only the --mat-sys-* tokens defined here, never raw colors.
+@use '@angular/material' as mat;
+@use 'styles/theme-colors' as roastery;
+@use 'styles/breakpoints' as bp;
+
+:root {
+  // Published for src/app/core/layout/breakpoints.ts, so CSS and the CDK share one definition.
+  --bp-medium-min: #{bp.$medium-min};
+  --bp-expanded-min: #{bp.$expanded-min};
+}
+
+html {
+  height: 100%;
+  // Follows the system preference; ThemeService pins a scheme through data-theme.
+  color-scheme: light dark;
+
+  // mat.theme only emits system tokens; each Material component reads them, so no per-component
+  // theme mixins are needed and none are imported for components the app does not use.
+  @include mat.theme(
+    (
+      color: (
+        primary: roastery.$primary-palette,
+        tertiary: roastery.$tertiary-palette,
+      ),
+      typography: (
+        plain-family: Inter,
+        brand-family: Fraunces,
+        regular-weight: 400,
+        medium-weight: 500,
+        bold-weight: 600,
+      ),
+      density: 0,
+    )
+  );
+
+  // Cream surfaces instead of the neutral palette's.
+  @include mat.theme-overrides(
+    (
+      surface: light-dark(#fbf6ef, #1e1612),
+      background: light-dark(#fbf6ef, #1e1612),
+      surface-container-lowest: light-dark(#ffffff, #18110d),
+      surface-container-low: light-dark(#f7f0e7, #261d18),
+      surface-container: light-dark(#f2eadf, #2b211b),
+    )
+  );
+
+  &[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  &[data-theme='dark'] {
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-large);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--mat-sys-headline-medium-font);
+  color: var(--mat-sys-on-surface);
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+// Visible focus for keyboard users on every interactive element.
+:focus-visible {
+  outline: 3px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+// Touch targets of at least 44x44 on compact screens.
+@include bp.compact {
+  .mat-mdc-button-base,
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

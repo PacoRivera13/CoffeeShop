@@ -64,3 +64,10 @@
 - Invoice numbers can jump (e.g. to 51) after SQL Server restarts, because sequences cache values; gaps are accepted.
 - `GET /orders/{id}/invoice` answers 202 only while the order's OrderPaid message is pending; a paid order whose event is Done or Failed without an invoice answers 409 "Invoice unavailable".
 - POST /prices only accepts the store currency (Pricing:Currency, default MXN, validated at startup); a ready invoice whose PDF is missing from storage answers 409 instead of a broken URL.
+- Web dev proxy sends /api to http://localhost:5121 (the API's http launch profile), not 5000; the nginx web container is deferred to a later milestone.
+- The Angular client is generated from openapi.json with ng-openapi-gen into web/src/app/api and committed; regenerate with `npm run gen:api`.
+- Playwright browsers are installed into web/node_modules (PLAYWRIGHT_BROWSERS_PATH=0, set by the npm scripts through cross-env).
+- `/` and `/admin` are placeholder pages until the catalogue and admin UI milestones; they exist to exercise guards and role redirects.
+- Breakpoints live only in _breakpoints.scss; TypeScript reads them through CSS custom properties to build CDK BreakpointObserver queries.
+- The drawer uses mat-button links instead of mat-nav-list, whose module pulls @angular/forms into the initial bundle (about 78 kB).
+- npm 11 install scripts stay blocked (esbuild, lmdb, msgpackr-extract, @parcel/watcher); their prebuilt binaries are enough.

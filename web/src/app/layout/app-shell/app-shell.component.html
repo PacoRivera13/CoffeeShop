@@ -1,0 +1,84 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav #drawer class="drawer" mode="over" data-testid="nav-drawer">
+    <!-- Plain mat-button links: mat-nav-list would pull @angular/forms into the initial bundle. -->
+    <nav class="drawer-nav" aria-label="Main menu">
+      @for (link of links(); track link.path) {
+        <a
+          mat-button
+          class="drawer-link"
+          data-testid="drawer-link"
+          [routerLink]="link.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          (click)="drawer.close()"
+        >
+          {{ link.label }}
+        </a>
+      }
+    </nav>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <header>
+      <mat-toolbar class="toolbar">
+        @if (compact()) {
+          <button
+            mat-icon-button
+            type="button"
+            aria-label="Open navigation"
+            data-testid="menu-button"
+            (click)="drawer.open()"
+          >
+            <mat-icon aria-hidden="true">menu</mat-icon>
+          </button>
+        }
+
+        <a class="brand" routerLink="/" data-testid="brand">Roastery</a>
+
+        @if (!compact()) {
+          <nav class="inline-nav" aria-label="Main" data-testid="inline-nav">
+            @for (link of links(); track link.path) {
+              <a
+                mat-button
+                data-testid="nav-link"
+                [routerLink]="link.path"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+                ariaCurrentWhenActive="page"
+              >
+                {{ link.label }}
+              </a>
+            }
+          </nav>
+        }
+
+        <span class="spacer"></span>
+
+        @if (auth.isAuthenticated()) {
+          <button mat-icon-button type="button" data-testid="cart-button" [attr.aria-label]="cartLabel()">
+            <mat-icon
+              aria-hidden="true"
+              matBadgeSize="small"
+              [matBadge]="cartCount()"
+              [matBadgeHidden]="cartCount() === 0"
+              >shopping_cart</mat-icon
+            >
+          </button>
+        }
+
+        <app-theme-toggle />
+
+        @if (auth.isAuthenticated()) {
+          <button mat-icon-button type="button" aria-label="Sign out" data-testid="logout-button" (click)="logout()">
+            <mat-icon aria-hidden="true">logout</mat-icon>
+          </button>
+        }
+      </mat-toolbar>
+    </header>
+
+    <main class="content">
+      <ng-content />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -1,0 +1,31 @@
+// The only place breakpoints are defined. styles.scss publishes them as custom properties, and
+// src/app/core/layout/breakpoints.ts builds the CDK BreakpointObserver queries from those properties.
+//   compact  < 600px
+//   medium   600px - 839px
+//   expanded >= 840px
+$medium-min: 600px;
+$expanded-min: 840px;
+
+@mixin compact {
+  @media (width < $medium-min) {
+    @content;
+  }
+}
+
+@mixin medium {
+  @media ($medium-min <= width < $expanded-min) {
+    @content;
+  }
+}
+
+@mixin medium-up {
+  @media (width >= $medium-min) {
+    @content;
+  }
+}
+
+@mixin expanded {
+  @media (width >= $expanded-min) {
+    @content;
+  }
+}

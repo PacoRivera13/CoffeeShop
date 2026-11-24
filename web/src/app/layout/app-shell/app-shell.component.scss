@@ -1,0 +1,68 @@
+@use 'styles/breakpoints' as bp;
+
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  background: var(--mat-sys-surface);
+}
+
+.drawer {
+  width: min(80vw, 300px);
+}
+
+.drawer-nav {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.drawer-link {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 48px;
+}
+
+.drawer-link.active,
+.inline-nav .active {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.toolbar {
+  gap: 4px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+}
+
+.brand {
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  margin-inline: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.inline-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.content {
+  padding: 16px;
+  max-width: 1200px;
+  margin-inline: auto;
+
+  @include bp.expanded {
+    padding: 32px;
+  }
+}

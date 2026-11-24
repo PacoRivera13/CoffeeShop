@@ -1,0 +1,46 @@
+@use 'breakpoints' as bp;
+
+// Sign-in and register layout: full width on compact, a centered card from medium up.
+@mixin auth-page {
+  .auth-page {
+    display: grid;
+    justify-items: center;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 8px;
+    background: var(--mat-sys-surface-container-low);
+
+    @include bp.medium-up {
+      max-width: 440px;
+      margin-top: 32px;
+      padding: 16px;
+    }
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font: var(--mat-sys-headline-small);
+  }
+
+  form {
+    display: grid;
+    gap: 4px;
+  }
+
+  app-error-banner {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .submit {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .alternate {
+    margin: 16px 0 0;
+    text-align: center;
+  }
+}

@@ -1,0 +1,8 @@
+@use 'styles/auth-page';
+
+@include auth-page.auth-page;
+
+// Leaves room for the two-line password hint.
+mat-form-field:last-of-type {
+  margin-bottom: 20px;
+}

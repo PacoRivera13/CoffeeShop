@@ -1,6 +1,6 @@
 # CoffeeShop
 
-Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) is not started yet.
+Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) has its foundation (design system, auth, sign-in pages) and grows page by page.
 
 ## Status
 
@@ -14,9 +14,10 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 3c | Admin inventory, concurrency guarantees | Done |
 | 4a | S3 file storage (MinIO), PDF invoices for paid orders | Done |
 | 4b | Invoice download with presigned URLs; MXN as store currency | Done |
-| — | Angular front end (`/web`) | Not started |
+| 5a | Angular foundation: "Roastery" Material 3 design system, generated API client, auth, app shell, sign-in and register | Done |
+| — | Angular catalogue, cart, orders and admin pages | Not started |
 
-224 automated tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers).
+224 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
 
 ## Tech stack
 
@@ -30,6 +31,8 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | Documents | QuestPDF (Community licence) |
 | API docs | OpenAPI document (`/openapi.json`) and Swagger UI in Development |
 | Tests | xUnit, `WebApplicationFactory`, Testcontainers (SQL Server, MinIO) |
+| Front end | Angular 22 (standalone, signals, zoneless), Angular Material 3 + CDK, ng-openapi-gen client |
+| Web tests | Vitest browser mode (Chromium) for components, Playwright + axe-core for pages |
 | Containers | Docker Compose: `sqlserver`, `minio`, `api` |
 
 ## Architecture
@@ -188,6 +191,18 @@ dotnet test --nologo -v q
 
 Docker must be running: integration tests start one shared SQL Server and one MinIO container. SQL Server tests in `Infrastructure.Tests` use a temporary LocalDB database on Windows.
 
+Web (Node.js 24 or 26, from `/web`):
+
+```bash
+npm ci
+npm run e2e:install    # Chromium for both test layers, inside node_modules
+npm test               # coverage check + Vitest component tests in Chromium
+npm run e2e            # Playwright page tests, desktop and mobile, API mocked
+npm start              # http://localhost:4200, /api proxied to the API on :5121
+```
+
+After an API change, regenerate the client with `npm run gen:api` (and `openapi.json` from the API tests).
+
 ## Project structure
 
 ```
@@ -196,13 +211,14 @@ src/Application      Use-case services and ports (IFileStorage, IMessageBus, IOr
 src/Infrastructure   EF Core, Identity, outbox and bus, S3 storage, invoices, migrations
 src/Api              Minimal API endpoints, auth, OpenAPI, Dockerfile
 tests/*.Tests        Domain, Application, Infrastructure and Api (integration) tests
+web/                 Angular app: src/app (core, layout, shared, pages, generated api), e2e, testing/fixtures
 docker-compose.yml   sqlserver, minio, api
 openapi.json         Committed API contract, kept in sync by a test
 ```
 
 ## Next steps
 
-- Angular front end in `/web`.
+- Angular catalogue, cart, orders and admin pages; an nginx web container in Docker Compose.
 - Login lockout and rate limiting; refresh tokens.
 - Retention job for processed outbox messages and inbox markers.
 - Retry on deadlocks for every write path (EF execution strategy).

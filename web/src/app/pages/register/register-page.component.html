@@ -1,0 +1,54 @@
+<div class="auth-page">
+  <mat-card class="auth-card" appearance="outlined">
+    <mat-card-content>
+      <h1>Create account</h1>
+
+      <app-error-banner [error]="error()" />
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate data-testid="register-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" autocomplete="name" data-testid="register-name" />
+          @if (form.controls.name.hasError('required')) {
+            <mat-error>Name is required.</mat-error>
+          } @else if (form.controls.name.hasError('maxlength')) {
+            <mat-error>Name must have at most {{ nameMaxLength }} characters.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" autocomplete="email" data-testid="register-email" />
+          @if (form.controls.email.hasError('required')) {
+            <mat-error>Email is required.</mat-error>
+          } @else if (form.controls.email.hasError('email')) {
+            <mat-error>Enter a valid email address.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            data-testid="register-password"
+          />
+          <mat-hint>At least {{ passwordMinLength }} characters, with upper and lower case, a digit and a symbol.</mat-hint>
+          @if (form.controls.password.hasError('required')) {
+            <mat-error>Password is required.</mat-error>
+          } @else if (form.controls.password.hasError('minlength')) {
+            <mat-error>Password must have at least {{ passwordMinLength }} characters.</mat-error>
+          }
+        </mat-form-field>
+
+        <button mat-flat-button class="submit" type="submit" data-testid="register-submit" [disabled]="submitting()">
+          Create account
+        </button>
+      </form>
+
+      <p class="alternate">Already have an account? <a routerLink="/login" data-testid="login-link">Sign in</a></p>
+    </mat-card-content>
+  </mat-card>
+</div>
