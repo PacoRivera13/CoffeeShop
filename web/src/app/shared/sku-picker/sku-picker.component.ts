@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal, output } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SkuResponse } from '../../api/models/sku-response';
 
@@ -66,10 +66,16 @@ const GRIND_LABELS: Record<string, string> = { WholeBean: 'Whole bean', Ground: 
 })
 export class SkuPickerComponent {
   readonly skus = input.required<readonly SkuResponse[]>();
+  /** The SKU shown as chosen, if any; the user's later choices replace it. */
+  readonly selectedId = input<number | null>(null);
   readonly skuChange = output<SkuResponse>();
 
-  protected readonly grind = signal<string | null>(null);
-  protected readonly size = signal<number | null>(null);
+  private readonly selected = computed(() => this.skus().find((s) => Number(s.id) === this.selectedId()) ?? null);
+  protected readonly grind = linkedSignal<string | null>(() => this.selected()?.grind ?? null);
+  protected readonly size = linkedSignal<number | null>(() => {
+    const sku = this.selected();
+    return sku ? Number(sku.sizeG) : null;
+  });
 
   protected readonly grinds = computed(() => [...new Set(this.skus().map((s) => s.grind))]);
   // The OpenAPI document types numbers as number | string (the API also reads numeric strings), so normalize.
@@ -85,11 +91,18 @@ export class SkuPickerComponent {
 
   protected selectGrind(grind: string): void {
     this.grind.set(grind);
+    // Keep the pair valid: a size this grind does not come in switches to its first size.
+    if (this.size() !== null && !this.isAvailable(grind, this.size())) {
+      this.size.set(this.sizes().find((size) => this.isAvailable(grind, size)) ?? null);
+    }
     this.emitIfComplete();
   }
 
   protected selectSize(size: number): void {
     this.size.set(size);
+    if (this.grind() !== null && !this.isAvailable(this.grind(), size)) {
+      this.grind.set(this.grinds().find((grind) => this.isAvailable(grind, size)) ?? null);
+    }
     this.emitIfComplete();
   }
 

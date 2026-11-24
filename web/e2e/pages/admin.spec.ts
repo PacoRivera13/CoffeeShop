@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { expectAccessibleInBothSchemes, expectNoHorizontalOverflow, signInAs } from '../support/helpers';
+import { expectAccessibleInBothSchemes, expectNoHorizontalOverflow, mockCatalog, signInAs } from '../support/helpers';
 
 test.describe('Admin page', () => {
   test('customers are redirected to the shop', async ({ page }) => {
     await signInAs(page, 'Customer');
+    await mockCatalog(page);
     await page.goto('/admin');
 
     await expect(page).toHaveURL('/');

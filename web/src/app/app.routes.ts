@@ -4,9 +4,29 @@ import { adminGuard, authGuard } from './core/auth/auth.guards';
 export const routes: Routes = [
   {
     path: '',
+    pathMatch: 'full',
     canActivate: [authGuard],
     title: 'Shop · Roastery',
-    loadComponent: () => import('./pages/home/home-page.component').then((m) => m.HomePageComponent),
+    loadComponent: () => import('./pages/catalog/catalog-page.component').then((m) => m.CatalogPageComponent),
+  },
+  {
+    path: 'cart',
+    canActivate: [authGuard],
+    title: 'Cart · Roastery',
+    loadComponent: () => import('./pages/cart/cart-page.component').then((m) => m.CartPageComponent),
+  },
+  {
+    path: 'orders',
+    canActivate: [authGuard],
+    title: 'Orders · Roastery',
+    loadComponent: () => import('./pages/orders/orders-page.component').then((m) => m.OrdersPageComponent),
+  },
+  {
+    path: 'orders/:id',
+    canActivate: [authGuard],
+    title: 'Order · Roastery',
+    loadComponent: () =>
+      import('./pages/order-detail/order-detail-page.component').then((m) => m.OrderDetailPageComponent),
   },
   {
     path: 'admin',

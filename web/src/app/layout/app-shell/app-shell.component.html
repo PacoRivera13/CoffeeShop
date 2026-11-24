@@ -56,15 +56,18 @@
         <span class="spacer"></span>
 
         @if (auth.isAuthenticated()) {
-          <button mat-icon-button type="button" data-testid="cart-button" [attr.aria-label]="cartLabel()">
-            <mat-icon
-              aria-hidden="true"
-              matBadgeSize="small"
-              [matBadge]="cartCount()"
-              [matBadgeHidden]="cartCount() === 0"
-              >shopping_cart</mat-icon
-            >
-          </button>
+          <!-- The badge sits on the link, whose label already says the count; the icon itself is decorative. -->
+          <a
+            mat-icon-button
+            routerLink="/cart"
+            data-testid="cart-button"
+            matBadgeSize="small"
+            [matBadge]="cartCount()"
+            [matBadgeHidden]="cartCount() === 0"
+            [attr.aria-label]="cartLabel()"
+          >
+            <mat-icon aria-hidden="true">shopping_cart</mat-icon>
+          </a>
         }
 
         <app-theme-toggle />
@@ -77,8 +80,12 @@
       </mat-toolbar>
     </header>
 
-    <main class="content">
+    <main class="content" [class.with-cart-bar]="showCartBar()">
       <ng-content />
     </main>
+
+    @if (showCartBar()) {
+      <app-cart-summary-bar [count]="cartCount()" [total]="cartTotal()" [currency]="cartCurrency() ?? ''" />
+    }
   </mat-sidenav-content>
 </mat-sidenav-container>

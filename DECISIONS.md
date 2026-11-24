@@ -73,3 +73,10 @@
 - npm 11 install scripts stay blocked (esbuild, lmdb, msgpackr-extract, @parcel/watcher); their prebuilt binaries are enough.
 - index.html carries a small inline script that applies the saved theme before first paint; a future Content-Security-Policy must allow it by hash.
 - The web session ends on a timer at the token expiry; register no longer signs in on its own, the page does, and a failed sign-in after registering sends the user to /login.
+- Milestone 5b needed no API change: GET /products already returns SKU ids, and the 409 stock problem carries productId, requiredG and availableG.
+- The catalogue accepts an optional ?asOf= query parameter and forwards it to GET /skus/{id}/price, to preview scheduled prices.
+- The cart lives in sessionStorage (roastery.cart), allows 1-50 units per SKU like the API, and is emptied when the session ends.
+- One Idempotency-Key per checkout attempt: retries of the same cart reuse it; any change to the cart starts a new attempt with a new key.
+- Order lines and stock errors carry ids only; the web resolves product names from the catalogue (falling back to "SKU n").
+- The invoice opens with window.open(url, '_blank', 'noopener') and also stays available as a link, since a popup after polling may be blocked.
+- Initial bundle warning budget is 550 kB (error stays at 1 MB): esbuild hoists framework modules shared with the lazy pages into main.

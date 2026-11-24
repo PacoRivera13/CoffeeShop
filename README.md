@@ -1,6 +1,6 @@
 # CoffeeShop
 
-Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) has its foundation (design system, auth, sign-in pages) and grows page by page.
+Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) has its foundation (design system, auth, sign-in pages) and the customer flow (catalogue, cart, checkout, orders, invoices).
 
 ## Status
 
@@ -15,7 +15,8 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 4a | S3 file storage (MinIO), PDF invoices for paid orders | Done |
 | 4b | Invoice download with presigned URLs; MXN as store currency | Done |
 | 5a | Angular foundation: "Roastery" Material 3 design system, generated API client, auth, app shell, sign-in and register | Done |
-| — | Angular catalogue, cart, orders and admin pages | Not started |
+| 5b | Customer flow: catalogue with live prices, cart, idempotent checkout, orders, order detail with pay/cancel and invoice polling | Done |
+| — | Angular admin pages | Not started |
 
 224 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
 
@@ -218,7 +219,7 @@ openapi.json         Committed API contract, kept in sync by a test
 
 ## Next steps
 
-- Angular catalogue, cart, orders and admin pages; an nginx web container in Docker Compose.
+- Angular admin pages; an nginx web container in Docker Compose.
 - Login lockout and rate limiting; refresh tokens.
 - Retention job for processed outbox messages and inbox markers.
 - Retry on deadlocks for every write path (EF execution strategy).

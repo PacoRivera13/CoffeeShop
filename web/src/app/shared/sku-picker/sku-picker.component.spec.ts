@@ -57,6 +57,19 @@ describe('SkuPickerComponent', () => {
     expect(skuChange).toHaveBeenCalledExactlyOnceWith({ id: 9, grind: 'Ground', sizeG: '500' });
   });
 
+  it('shows a preselected SKU and emits the next full choice', async () => {
+    const { fixture, skuChange, loader } = await render(SKUS);
+    fixture.componentRef.setInput('selectedId', 2);
+    await fixture.whenStable();
+
+    expect(await (await loader.getHarness(MatButtonToggleHarness.with({ text: 'Whole bean' }))).isChecked()).toBe(true);
+    expect(await (await loader.getHarness(MatButtonToggleHarness.with({ text: '1000 g' }))).isChecked()).toBe(true);
+
+    await (await loader.getHarness(MatButtonToggleHarness.with({ text: '500 g' }))).check();
+
+    expect(skuChange).toHaveBeenCalledExactlyOnceWith(SKUS[0]);
+  });
+
   it('says so when there is nothing to pick', async () => {
     await render([]);
 

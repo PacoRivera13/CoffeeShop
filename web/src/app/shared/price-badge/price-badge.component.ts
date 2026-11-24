@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component, computed, input, LOCALE_ID, inject 
   styles: `
     .price {
       font: var(--mat-sys-title-medium);
-      color: var(--mat-sys-on-surface);
+      color: inherit;
       white-space: nowrap;
     }
   `,

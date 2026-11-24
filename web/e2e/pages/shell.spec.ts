@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { expectMinTouchTarget, expectNoHorizontalOverflow, signInAs } from '../support/helpers';
+import { expectMinTouchTarget, expectNoHorizontalOverflow, mockCatalog, signInAs } from '../support/helpers';
 
 test.describe('App shell', () => {
   test.beforeEach(async ({ page }) => {
     await signInAs(page, 'Admin');
+    await mockCatalog(page);
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();
   });

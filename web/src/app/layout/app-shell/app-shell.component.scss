@@ -66,3 +66,8 @@
     padding: 32px;
   }
 }
+
+// Room for the fixed cart bar, so it never covers the end of the page.
+.content.with-cart-bar {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
