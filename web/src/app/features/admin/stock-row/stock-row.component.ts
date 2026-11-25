@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -82,7 +82,8 @@ export class StockRowComponent {
   readonly selected = input(false);
   readonly choose = output<void>();
 
-  protected readonly grams = computed(() => formatGrams(Number(this.item().stockG)));
-  protected readonly kg = computed(() => formatKg(Number(this.item().stockG)));
+  private readonly locale = inject(LOCALE_ID);
+  protected readonly grams = computed(() => formatGrams(Number(this.item().stockG), this.locale));
+  protected readonly kg = computed(() => formatKg(Number(this.item().stockG), this.locale));
   protected readonly low = computed(() => isLowStock(Number(this.item().stockG)));
 }

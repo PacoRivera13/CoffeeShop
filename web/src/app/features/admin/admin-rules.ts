@@ -11,12 +11,12 @@ export function isLowStock(stockG: number): boolean {
   return stockG < LOW_STOCK_THRESHOLD_G;
 }
 
-/** "20 kg", "1.25 kg": kilograms with up to three decimals (exact to the gram). */
-export function formatKg(grams: number, locale = 'en-US'): string {
+/** "20 kg", "1.25 kg": kilograms with up to three decimals (exact to the gram), in the app's LOCALE_ID. */
+export function formatKg(grams: number, locale: string): string {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(grams / 1000)} kg`;
 }
 
-export function formatGrams(grams: number, locale = 'en-US'): string {
+export function formatGrams(grams: number, locale: string): string {
   return `${new Intl.NumberFormat(locale).format(grams)} g`;
 }
 
@@ -43,9 +43,9 @@ const REASONS: Record<string, { label: string; icon: string }> = {
   Release: { label: 'Released from order', icon: 'undo' },
 };
 
-export function movementView(movement: MovementResponse): MovementView {
+export function movementView(movement: MovementResponse, locale: string): MovementView {
   const reason = REASONS[movement.reason] ?? { label: movement.reason, icon: 'swap_vert' };
   const grams = Number(movement.deltaG);
   const sign = grams > 0 ? '+' : grams < 0 ? '−' : '';
-  return { ...reason, delta: `${sign}${formatGrams(Math.abs(grams))}` };
+  return { ...reason, delta: `${sign}${formatGrams(Math.abs(grams), locale)}` };
 }

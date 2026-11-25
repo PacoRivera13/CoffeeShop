@@ -71,6 +71,35 @@ describe('PriceFormComponent', () => {
     await expect.element(page.getByText('A price already starts on this date.')).toBeVisible();
   });
 
+  it('shows no required errors after a reset that follows a submit', async () => {
+    const { fixture } = await render();
+    await page.getByLabelText('Amount').fill('310');
+    await page.getByTestId('effective-from').fill('2099-12-01');
+    await submit();
+
+    fixture.componentInstance.reset();
+    await fixture.whenStable();
+
+    await expect.element(page.getByText('Amount is required.')).not.toBeInTheDocument();
+    await expect.element(page.getByText('Effective date is required.')).not.toBeInTheDocument();
+  });
+
+  it('drops a server date error once the conflict is cleared', async () => {
+    const { fixture, save } = await render();
+    await page.getByLabelText('Amount').fill('310');
+    await page.getByTestId('effective-from').fill('2099-12-01');
+    fixture.componentRef.setInput('conflict', 'duplicate');
+    await fixture.whenStable();
+    await expect.element(page.getByText('A price already starts on this date.')).toBeVisible();
+
+    fixture.componentRef.setInput('conflict', null);
+    await fixture.whenStable();
+    await submit();
+
+    await expect.element(page.getByText('A price already starts on this date.')).not.toBeInTheDocument();
+    expect(save).toHaveBeenCalledOnce();
+  });
+
   it('disables saving while pending and resets amount and date afterwards', async () => {
     const { fixture } = await render();
     await page.getByLabelText('Amount').fill('310');

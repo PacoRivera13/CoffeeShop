@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, LOCALE_ID, signal, viewChild } from '@angular/core';
 import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -49,7 +49,8 @@ export const MOVEMENTS_PAGE_SIZE = 10;
       @if (inventory.value().length === 0) {
         <app-empty-state icon="inventory_2" title="No products" message="Products appear here once they exist." />
       } @else {
-        <ul class="stock" aria-label="Stock">
+        <h2 id="stock-title">Stock</h2>
+        <ul class="stock" aria-labelledby="stock-title">
           @for (item of inventory.value(); track item.productId) {
             <li>
               <app-stock-row [item]="item" [selected]="+item.productId === productId()" (choose)="selectProduct(+item.productId)" />
@@ -128,6 +129,7 @@ export class AdminInventoryPageComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
   private readonly restockForm = viewChild(RestockFormComponent);
+  private readonly locale = inject(LOCALE_ID);
 
   /** ?product= and ?page= query parameters. */
   readonly product = input<string | undefined>(undefined);
@@ -195,7 +197,7 @@ export class AdminInventoryPageComponent {
           );
           this.restockForm()?.reset();
           this.movements.reload();
-          this.snackBar.open(`Added ${formatGrams(grams)} to ${product.name}`, undefined, { duration: 4000 });
+          this.snackBar.open(`Added ${formatGrams(grams, this.locale)} to ${product.name}`, undefined, { duration: 4000 });
         },
         error: (error: unknown) => {
           this.restocking.set(false);

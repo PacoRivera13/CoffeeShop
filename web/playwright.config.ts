@@ -14,16 +14,20 @@ export default defineConfig({
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
   },
-  projects: [
-    { name: 'desktop', testIgnore: /full\//, use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', testIgnore: /full\//, use: { ...devices['Pixel 7'] } },
-    {
-      name: 'full',
-      testDir: './e2e/full',
-      grep: /@full/,
-      use: { ...devices['Desktop Chrome'], baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:8080' },
-    },
-  ],
+  // The full project exists only when E2E_FULL is set, so no other way of running Playwright picks it up.
+  projects: isFull
+    ? [
+        {
+          name: 'full',
+          testDir: './e2e/full',
+          grep: /@full/,
+          use: { ...devices['Desktop Chrome'], baseURL: process.env['E2E_BASE_URL'] ?? 'http://localhost:8080' },
+        },
+      ]
+    : [
+        { name: 'desktop', testIgnore: /full\//, use: { ...devices['Desktop Chrome'] } },
+        { name: 'mobile', testIgnore: /full\//, use: { ...devices['Pixel 7'] } },
+      ],
   // The default run mocks the API and serves the app with ng serve; the full run uses the compose stack instead.
   ...(isFull
     ? {}

@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, input, output, viewChild } from '@angular/core';
+import { FormBuilder, FormGroupDirective, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -77,6 +77,7 @@ export class RestockFormComponent {
   readonly pending = input(false);
   readonly restock = output<number>();
 
+  private readonly formDirective = viewChild.required(FormGroupDirective);
   protected readonly min = MIN_RESTOCK_GRAMS;
   protected readonly max = MAX_RESTOCK_GRAMS;
   protected readonly form = inject(FormBuilder).group({
@@ -91,8 +92,9 @@ export class RestockFormComponent {
     ],
   });
 
+  /** resetForm, not reset: it also clears the submitted state, so the empty field is not shown as an error. */
   reset(): void {
-    this.form.reset();
+    this.formDirective().resetForm();
   }
 
   protected submit(): void {

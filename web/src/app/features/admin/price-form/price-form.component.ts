@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, viewChild } from '@angular/core';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroupDirective,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -59,7 +66,7 @@ export type PriceDateConflict = 'duplicate' | 'past' | null;
           </mat-form-field>
           <mat-form-field>
             <mat-label>Effective from (UTC)</mat-label>
-            <input matInput type="date" data-testid="effective-from" [min]="minDate" formControlName="effectiveFrom" />
+            <input matInput type="date" data-testid="effective-from" [min]="minDate()" formControlName="effectiveFrom" />
             <mat-hint>Starts at 00:00 UTC on this day.</mat-hint>
             @if (form.controls.effectiveFrom.hasError('required')) {
               <mat-error>Effective date is required.</mat-error>
@@ -107,26 +114,35 @@ export class PriceFormComponent {
   readonly conflict = input<PriceDateConflict>(null);
   readonly save = output<NewPrice>();
 
-  protected readonly minDate = todayUtc();
+  private readonly formDirective = viewChild.required(FormGroupDirective);
   protected readonly form = inject(FormBuilder).nonNullable.group({
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     currency: ['MXN', [Validators.required, Validators.pattern(/^[A-Za-z]{3}$/)]],
-    effectiveFrom: ['', [Validators.required, notBefore(this.minDate)]],
+    effectiveFrom: ['', [Validators.required, notBeforeTodayUtc]],
   });
 
   constructor() {
     effect(() => {
       const conflict = this.conflict();
-      if (conflict === null) return;
       const control = this.form.controls.effectiveFrom;
+      if (conflict === null) {
+        // Drops a server error from an earlier attempt (e.g. after switching SKU); validators run again.
+        control.updateValueAndValidity();
+        return;
+      }
       control.setErrors({ ...control.errors, [conflict]: true });
       control.markAsTouched();
     });
   }
 
-  /** Clears the amount and date after a save; the currency stays. */
+  /** Clears the amount and date after a save; the currency stays. resetForm also clears the submitted state. */
   reset(): void {
-    this.form.reset({ amount: null, currency: this.form.controls.currency.value, effectiveFrom: '' });
+    this.formDirective().resetForm({ amount: null, currency: this.form.controls.currency.value, effectiveFrom: '' });
+  }
+
+  /** Today in UTC, read on every check so a page left open past midnight UTC moves on. */
+  protected minDate(): string {
+    return todayUtc();
   }
 
   protected submit(): void {
@@ -139,8 +155,7 @@ export class PriceFormComponent {
   }
 }
 
-/** yyyy-MM-dd strings compare correctly as text. */
-function notBefore(min: string) {
-  return (control: AbstractControl<string>): ValidationErrors | null =>
-    control.value && control.value < min ? { past: true } : null;
+/** yyyy-MM-dd strings compare correctly as text; today is read at validation time. */
+function notBeforeTodayUtc(control: AbstractControl<string>): ValidationErrors | null {
+  return control.value && control.value < todayUtc() ? { past: true } : null;
 }

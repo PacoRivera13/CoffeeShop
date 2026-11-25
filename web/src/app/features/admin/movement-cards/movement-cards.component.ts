@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, LOCALE_ID } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { MovementResponse } from '../../../api/models/movement-response';
-import { movementView } from '../admin-rules';
+import { MovementView, movementView } from '../admin-rules';
 
 /** Compact screens: the same ledger as stacked cards. */
 @Component({
@@ -76,5 +76,8 @@ import { movementView } from '../admin-rules';
 export class MovementCardsComponent {
   readonly movements = input.required<readonly MovementResponse[]>();
 
-  protected readonly view = movementView;
+  private readonly locale = inject(LOCALE_ID);
+  protected view(movement: MovementResponse): MovementView {
+    return movementView(movement, this.locale);
+  }
 }

@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, LOCALE_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { MovementResponse } from '../../../api/models/movement-response';
-import { movementView } from '../admin-rules';
+import { MovementView, movementView } from '../admin-rules';
 
 /** Expanded screens: the stock ledger of one product as a table. */
 @Component({
@@ -63,5 +63,8 @@ export class MovementTableComponent {
   readonly movements = input.required<readonly MovementResponse[]>();
 
   protected readonly columns = ['when', 'reason', 'delta', 'order'];
-  protected readonly view = movementView;
+  private readonly locale = inject(LOCALE_ID);
+  protected view(movement: MovementResponse): MovementView {
+    return movementView(movement, this.locale);
+  }
 }

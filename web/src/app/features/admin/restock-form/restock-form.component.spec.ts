@@ -55,6 +55,18 @@ describe('RestockFormComponent', () => {
     expect(restock.mock.calls).toEqual([[1], [1000000]]);
   });
 
+  it('shows no error after a reset that follows a restock', async () => {
+    const { fixture, restock } = await render();
+    await tryGrams('5000');
+    expect(restock).toHaveBeenCalledExactlyOnceWith(5000);
+
+    fixture.componentInstance.reset();
+    await fixture.whenStable();
+
+    await expect.element(page.getByLabelText('Grams to add')).toHaveValue(null);
+    await expect.element(page.getByText('Enter the grams to add.')).not.toBeInTheDocument();
+  });
+
   it('disables the button while restocking', async () => {
     const { fixture } = await render();
     fixture.componentRef.setInput('pending', true);
