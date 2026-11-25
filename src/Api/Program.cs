@@ -4,11 +4,13 @@ using CoffeeShop.Application.Auth;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure;
 using CoffeeShop.Infrastructure.Auth;
+using CoffeeShop.Infrastructure.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+DemoSeeder.EnsureAllowed(builder.Configuration, builder.Environment);
 
 var jwtOptions = JwtOptions.Load(builder.Configuration);
 
@@ -51,6 +53,8 @@ var app = builder.Build();
 
 await app.Services.SeedAdminAsync(app.Configuration);
 await app.Services.EnsureStorageBucketAsync();
+if (DemoSeeder.IsEnabled(app.Configuration))
+    await app.Services.SeedDemoAsync(app.Configuration, app.Environment);
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

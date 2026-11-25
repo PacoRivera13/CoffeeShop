@@ -35,24 +35,55 @@ public sealed class MsSqlFixture : IAsyncLifetime
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
+    public const string DemoCustomerEmail = "demo-customer@example.test";
+    public const string DemoCustomerPassword = "Demo!Passw0rd";
+
+    private Task<WebApplicationFactory<Program>>? _demoFactory;
+
     public string MinioEndpoint => _minio.GetConnectionString();
     public string PublicMinioEndpoint => new UriBuilder(_minio.GetConnectionString()) { Host = "localhost" }.Uri.ToString();
     public string MinioAccessKey => _minio.GetAccessKey();
     public string MinioSecretKey => _minio.GetSecretKey();
 
     /// <summary>A dedicated database: the container's default is master, where READ_COMMITTED_SNAPSHOT cannot be enabled.</summary>
-    private string ConnectionString =>
-        new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = "CoffeeShopTests" }.ConnectionString;
+    private string ConnectionString => ConnectionStringFor("CoffeeShopTests");
+
+    private string ConnectionStringFor(string database) =>
+        new SqlConnectionStringBuilder(_container.GetConnectionString()) { InitialCatalog = database }.ConnectionString;
 
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_container.StartAsync(), _minio.StartAsync());
-
-        await using var db = new CoffeeShopDbContext(
-            new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(ConnectionString).Options);
-        await db.Database.MigrateAsync();
+        await MigrateAsync(ConnectionString);
 
         Factory = CreateFactory(("Admin:Email", AdminEmail), ("Admin:Password", AdminPassword));
+    }
+
+    private static async Task MigrateAsync(string connectionString)
+    {
+        await using var db = new CoffeeShopDbContext(
+            new DbContextOptionsBuilder<CoffeeShopDbContext>().UseSqlServer(connectionString).Options);
+        await db.Database.MigrateAsync();
+    }
+
+    /// <summary>
+    /// An API seeded with the demo data on its own database in the same container, so demo rows never reach the
+    /// database the other tests share. Created once and reused.
+    /// </summary>
+    public Task<WebApplicationFactory<Program>> DemoFactoryAsync() => _demoFactory ??= CreateDemoFactoryAsync();
+
+    private async Task<WebApplicationFactory<Program>> CreateDemoFactoryAsync()
+    {
+        var connectionString = ConnectionStringFor("CoffeeShopDemo");
+        await MigrateAsync(connectionString);
+
+        var factory = CreateFactory(
+            ("ConnectionStrings:Default", connectionString),
+            ("Seed:Demo", "true"),
+            ("Seed:CustomerEmail", DemoCustomerEmail),
+            ("Seed:CustomerPassword", DemoCustomerPassword));
+        _ = factory.Server; // Starts the host, which runs the demo seed.
+        return factory;
     }
 
     public WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
@@ -71,30 +102,34 @@ public sealed class MsSqlFixture : IAsyncLifetime
                 host.UseSetting(key, value);
         });
 
-    public Task<HttpClient> AdminClientAsync() => ClientForAsync(AdminEmail, AdminPassword);
+    public Task<HttpClient> AdminClientAsync() => ClientForAsync(Factory, AdminEmail, AdminPassword);
 
-    public async Task<HttpClient> NewCustomerClientAsync()
+    public Task<HttpClient> NewCustomerClientAsync() => NewCustomerClientAsync(Factory);
+
+    public async Task<HttpClient> NewCustomerClientAsync(WebApplicationFactory<Program> factory)
     {
         var email = $"{Guid.NewGuid():N}@example.test";
-        var registered = await Factory.CreateClient()
+        var registered = await factory.CreateClient()
             .PostAsJsonAsync("/auth/register", new RegisterRequest(email, CustomerPassword, "Test Customer"));
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
-        return await ClientForAsync(email, CustomerPassword);
+        return await ClientForAsync(factory, email, CustomerPassword);
     }
 
-    private async Task<HttpClient> ClientForAsync(string email, string password)
+    public static async Task<HttpClient> ClientForAsync(WebApplicationFactory<Program> factory, string email, string password)
     {
-        var login = await Factory.CreateClient().PostAsJsonAsync("/auth/login", new LoginRequest(email, password));
+        var login = await factory.CreateClient().PostAsJsonAsync("/auth/login", new LoginRequest(email, password));
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.AccessToken;
 
-        var client = Factory.CreateClient();
+        var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
 
     public async Task DisposeAsync()
     {
+        if (_demoFactory is not null)
+            await (await _demoFactory).DisposeAsync();
         await Factory.DisposeAsync();
         await _container.DisposeAsync();
         await _minio.DisposeAsync();

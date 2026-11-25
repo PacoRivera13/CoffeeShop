@@ -17,8 +17,9 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 5a | Angular foundation: "Roastery" Material 3 design system, generated API client, auth, app shell, sign-in and register | Done |
 | 5b | Customer flow: catalogue with live prices, cart, idempotent checkout, orders, order detail with pay/cancel and invoice polling | Done |
 | 5c | Admin prices and inventory screens, nginx web container, full-stack purchase spec | Done |
+| 6a | Demo seeder (Development only) and one-command local environment | Done |
 
-224 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
+232 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
 
 ## Tech stack
 
@@ -139,6 +140,18 @@ Full rules live in [CLAUDE.MD](CLAUDE.MD); design decisions and trade-offs in [D
 | POST | `/admin/inventory/{productId}/restock` | Admin |
 
 The full contract, status codes included, is in [openapi.json](openapi.json); Swagger UI is served at `/swagger` in Development.
+
+## Run locally
+
+Prerequisites: .NET 10 SDK, Node.js 24+, Docker Desktop. Infrastructure runs in Docker; API and web run on the host.
+
+```bash
+cp .env.example .env    # local-only defaults; change them if you like
+scripts/dev.sh          # or scripts/dev.ps1: DB + MinIO, migrations, demo data, API on :5121, web on :4200
+scripts/dev-reset.sh    # or scripts/dev-reset.ps1: drop the volumes so the next run reseeds
+```
+
+The script prints the URLs and the demo Admin and Customer credentials from `.env`.
 
 ## Getting started
 

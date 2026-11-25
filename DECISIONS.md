@@ -87,3 +87,9 @@
 - The admin menu (MatMenu) is loaded with @defer only for admins, keeping it out of the initial bundle.
 - The @full purchase spec runs only through `npm run e2e:full` (project "full", no dev server); `npm run e2e` runs desktop and mobile only.
 - Full-stack admin credentials come from E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD, which must match the stack's Admin__Email / Admin__Password.
+- The demo seed keeps the migration HasData catalogue, so a dev database lists 9 products (3 legacy, 6 demo, two named Yirgacheffe).
+- scripts/dev runs the API on :5121 to match proxy.conf.json and launchSettings; the compose service is `sqlserver`, not `db`.
+- Roast is a free string, so demo roasts (including "Medium-Dark") are stored as given; no mapping was needed.
+- The demo seeder backdates orders, restocks and outbox rows by constructing OrderService/InventoryService with a fixed TimeProvider.
+- scripts/dev ignores Jwt__Key from .env (it would override user-secrets) and generates its own key into user-secrets once.
+- Demo-seeder tests use a second database (CoffeeShopDemo) on the shared SQL Server container, so demo rows never reach other tests.
