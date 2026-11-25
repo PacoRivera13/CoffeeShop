@@ -72,9 +72,18 @@ public sealed class MsSqlFixture : IAsyncLifetime
     /// </summary>
     public Task<WebApplicationFactory<Program>> DemoFactoryAsync() => _demoFactory ??= CreateDemoFactoryAsync();
 
+    /// <summary>Another API over the already seeded demo database, with extra settings (the seed itself is skipped).</summary>
+    public async Task<WebApplicationFactory<Program>> CreateDemoDatabaseFactoryAsync(params (string Key, string Value)[] settings)
+    {
+        await DemoFactoryAsync();
+        return CreateFactory([("ConnectionStrings:Default", ConnectionStringFor(DemoDatabase)), .. settings]);
+    }
+
+    private const string DemoDatabase = "CoffeeShopDemo";
+
     private async Task<WebApplicationFactory<Program>> CreateDemoFactoryAsync()
     {
-        var connectionString = ConnectionStringFor("CoffeeShopDemo");
+        var connectionString = ConnectionStringFor(DemoDatabase);
         await MigrateAsync(connectionString);
 
         var factory = CreateFactory(

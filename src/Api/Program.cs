@@ -1,11 +1,15 @@
 using CoffeeShop.Api;
+using CoffeeShop.Api.Diagnostics;
 using CoffeeShop.Application;
 using CoffeeShop.Application.Auth;
 using CoffeeShop.Domain.Entities;
 using CoffeeShop.Infrastructure;
 using CoffeeShop.Infrastructure.Auth;
+using CoffeeShop.Infrastructure.Health;
 using CoffeeShop.Infrastructure.Seeding;
+using CoffeeShop.Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Logging.Console;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,10 +18,11 @@ DemoSeeder.EnsureAllowed(builder.Configuration, builder.Environment);
 
 var jwtOptions = JwtOptions.Load(builder.Configuration);
 
+builder.Logging.AddConsoleFormatter<CorrelationConsoleFormatter, ConsoleFormatterOptions>();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
-builder.Services.AddSingleton(TimeProvider.System);
+var clockOffsetDays = builder.Services.AddClocks(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PriceService>();
 var storeCurrency = builder.Configuration["Pricing:Currency"] ?? "MXN";
@@ -28,6 +33,7 @@ builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("De
 builder.Services.AddAuthInfrastructure(jwtOptions);
 builder.Services.AddMessaging(builder.Configuration);
 builder.Services.AddStorage(builder.Configuration);
+builder.Services.AddCoffeeShopHealthChecks();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -51,11 +57,17 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
+if (clockOffsetDays != 0)
+    app.Logger.LogWarning(
+        "*** DEV CLOCK SHIFTED BY {OffsetDays:+0;-0} DAYS: the app believes it is {AppNow:u}. Remove Dev__ClockOffsetDays to use the real time. ***",
+        clockOffsetDays, app.Services.GetRequiredService<TimeProvider>().GetUtcNow());
+
 await app.Services.SeedAdminAsync(app.Configuration);
 await app.Services.EnsureStorageBucketAsync();
 if (DemoSeeder.IsEnabled(app.Configuration))
     await app.Services.SeedDemoAsync(app.Configuration, app.Environment);
 
+app.UseRequestDiagnostics();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -73,5 +85,7 @@ app.MapAuthEndpoints();
 app.MapPriceEndpoints();
 app.MapOrderEndpoints();
 app.MapAdminInventoryEndpoints();
+app.MapAdminOutboxEndpoints();
+app.MapHealthEndpoints();
 
 await app.RunAsync();

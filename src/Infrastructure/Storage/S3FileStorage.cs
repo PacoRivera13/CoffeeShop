@@ -3,6 +3,8 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using CoffeeShop.Application.Storage;
+using CoffeeShop.Infrastructure.Time;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace CoffeeShop.Infrastructure.Storage;
@@ -39,7 +41,7 @@ public sealed class S3FileStorage : IFileStorage, IDisposable
     private readonly string _bucket;
     private readonly TimeProvider _clock;
 
-    public S3FileStorage(IOptions<StorageOptions> options, TimeProvider clock)
+    public S3FileStorage(IOptions<StorageOptions> options, [FromKeyedServices(Clocks.Real)] TimeProvider clock)
     {
         var settings = options.Value;
         var credentials = new BasicAWSCredentials(settings.AccessKey, settings.SecretKey);
@@ -95,6 +97,9 @@ public sealed class S3FileStorage : IFileStorage, IDisposable
         await _client.DeleteObjectAsync(_bucket, key, ct);
 
     /// <summary>Creates the bucket when it is missing. It gets no policy, so it stays private.</summary>
+    /// <summary>True when the configured bucket exists and the credentials can reach it.</summary>
+    public Task<bool> BucketExistsAsync() => Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_client, _bucket);
+
     public async Task EnsureBucketAsync(CancellationToken ct)
     {
         try

@@ -93,3 +93,9 @@
 - The demo seeder backdates orders, restocks and outbox rows by constructing OrderService/InventoryService with a fixed TimeProvider.
 - scripts/dev ignores Jwt__Key from .env (it would override user-secrets) and generates its own key into user-secrets once.
 - Demo-seeder tests use a second database (CoffeeShopDemo) on the shared SQL Server container, so demo rows never reach other tests.
+- Dev__ClockOffsetDays shifts only the application clock; JwtTokenIssuer, S3 presigning and log timestamps take the keyed real clock, because JwtBearer and S3 check tokens and URLs against real time.
+- scripts/dev-infra writes the API environment to .vscode/api.env (git-ignored by .vscode/*, LF endings) for the VS Code launch config; Visual Studio/Rider users copy it into user-secrets.
+- GET /health returns {status, checks:[{name, status, durationMs}]} only (503 when any check fails), never exception text; /health/live checks the process alone.
+- GET /admin/outbox lists newest OccurredAt first; status is optional and case-insensitive; pageSize is capped at 100.
+- The Development console uses a custom "correlation" formatter: time, level, short category, [correlation id], message; other scopes are dropped.
+- api.http uses REST Client request-variable syntax (also Visual Studio); httpyac does not support it, so it was verified by replaying the same requests with a script.

@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IPriceStore, PriceStore>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IOutboxQuery, OutboxQuery>();
         return services;
     }
 

@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using CoffeeShop.Application.Auth;
+using CoffeeShop.Infrastructure.Time;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CoffeeShop.Infrastructure.Auth;
 
-internal sealed class JwtTokenIssuer(JwtOptions options, TimeProvider clock)
+internal sealed class JwtTokenIssuer(JwtOptions options, [FromKeyedServices(Clocks.Real)] TimeProvider clock)
 {
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(60);
 

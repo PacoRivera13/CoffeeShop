@@ -5,6 +5,8 @@ export type { CreateOrderItemRequest } from './models/create-order-item-request'
 export type { CreateOrderRequest } from './models/create-order-request';
 export type { CreatePriceRequest } from './models/create-price-request';
 export type { CurrentUserResponse } from './models/current-user-response';
+export type { HealthCheckResponse } from './models/health-check-response';
+export type { HealthResponse } from './models/health-response';
 export type { HttpValidationProblemDetails } from './models/http-validation-problem-details';
 export type { InventoryResponse } from './models/inventory-response';
 export type { InvoicePendingResponse } from './models/invoice-pending-response';
@@ -16,6 +18,8 @@ export type { MovementResponse } from './models/movement-response';
 export type { OrderLineResponse } from './models/order-line-response';
 export type { OrderPageResponse } from './models/order-page-response';
 export type { OrderResponse } from './models/order-response';
+export type { OutboxMessageResponse } from './models/outbox-message-response';
+export type { OutboxPageResponse } from './models/outbox-page-response';
 export type { PriceCreatedResponse } from './models/price-created-response';
 export type { PriceHistoryResponse } from './models/price-history-response';
 export type { PriceResponse } from './models/price-response';

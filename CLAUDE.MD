@@ -31,6 +31,8 @@ Order.idempotency_key: same Idempotency-Key from the same customer -> original o
 - Handlers with external I/O (e.g. uploads) run outside a transaction (IRunsOutsideTransaction) and are idempotent through a deterministic key + unique constraint.
 - All file access goes through IFileStorage; object keys are deterministic (invoices/{orderId}.pdf) and invoice generation is idempotent.
 - Download URLs are presigned and short-lived (5 minutes) and are signed for the public endpoint; API responses never expose the bucket, storage key fields or the internal storage endpoint.
+- Every "now" comes from the injected TimeProvider (a test fails on DateTime/DateTimeOffset.Now|UtcNow in src). Dev__ClockOffsetDays shifts it in Development only (startup fails elsewhere); JWT issuing, presigned URLs and log timestamps use the keyed real clock (Clocks.Real).
+- Every request gets an X-Correlation-Id (echoed when safe, otherwise generated) that scopes all its log lines; /health never exposes configuration.
 - Demo seed is opt-in (Seed__Demo=true) and Development-only: any other environment fails startup. It writes through the domain entities and application services (restocks, real order flow), is idempotent (skips when "Chiapas Altura" exists) and never replaces test data: the migration seed and test fixtures stay separate.
 - Every web component has a colocated Vitest browser spec (`<name>.component.spec.ts`, real Chromium).
 - Every routed page has a Playwright spec (`web/e2e/pages/<page>.spec.ts`) with the API mocked, run on the desktop and mobile projects.

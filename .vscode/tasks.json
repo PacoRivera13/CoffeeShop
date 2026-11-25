@@ -1,0 +1,58 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "infra",
+      "detail": "SQL Server + MinIO in Docker, migrations, .vscode/api.env (scripts/dev-infra)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/dev-infra.sh"],
+      "windows": {
+        "command": "powershell",
+        "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/dev-infra.ps1"]
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "build api",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "src/Api/CoffeeShop.Api.csproj", "-v", "q", "--nologo", "/property:GenerateFullPaths=true"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "ng serve",
+      "detail": "Angular dev server on http://localhost:4200 with the /api proxy",
+      "type": "npm",
+      "script": "start",
+      "path": "web",
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": {
+        "owner": "angular",
+        "pattern": { "regexp": "^\\s*(ERROR|✘ \\[ERROR\\])\\s+(.*)$", "severity": 1, "message": 2 },
+        "background": {
+          "activeBegins": true,
+          "beginsPattern": "Building|Changes detected|Initial chunk files",
+          "endsPattern": "Local:|Watch mode enabled|Application bundle generation (complete|failed)"
+        }
+      }
+    },
+    {
+      "label": "full stack: prepare",
+      "detail": "infra, then the API build and ng serve in parallel",
+      "dependsOrder": "sequence",
+      "dependsOn": ["infra", "api and web"],
+      "problemMatcher": []
+    },
+    {
+      "label": "api and web",
+      "dependsOn": ["build api", "ng serve"],
+      "problemMatcher": []
+    }
+  ]
+}

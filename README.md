@@ -18,8 +18,9 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 5b | Customer flow: catalogue with live prices, cart, idempotent checkout, orders, order detail with pay/cancel and invoice polling | Done |
 | 5c | Admin prices and inventory screens, nginx web container, full-stack purchase spec | Done |
 | 6a | Demo seeder (Development only) and one-command local environment | Done |
+| 6b | Debug configs, dev clock, admin outbox and health endpoints, api.http, correlation-id request logs | Done |
 
-232 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
+253 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
 
 ## Tech stack
 
@@ -138,6 +139,8 @@ Full rules live in [CLAUDE.MD](CLAUDE.MD); design decisions and trade-offs in [D
 | GET | `/orders/{id}/invoice` | Owner or Admin |
 | GET | `/admin/inventory`, `/admin/inventory/{productId}/movements` | Admin |
 | POST | `/admin/inventory/{productId}/restock` | Admin |
+| GET | `/admin/outbox?status=Pending\|Done\|Failed&page=&pageSize=` | Admin |
+| GET | `/health` (liveness + SQL Server + bucket), `/health/live` | Anonymous |
 
 The full contract, status codes included, is in [openapi.json](openapi.json); Swagger UI is served at `/swagger` in Development.
 
@@ -151,7 +154,11 @@ scripts/dev.sh          # or scripts/dev.ps1: DB + MinIO, migrations, demo data,
 scripts/dev-reset.sh    # or scripts/dev-reset.ps1: drop the volumes so the next run reseeds
 ```
 
-The script prints the URLs and the demo Admin and Customer credentials from `.env`.
+The script prints the URLs and the demo Admin and Customer credentials from `.env`. Every response carries an `X-Correlation-Id`, which also prefixes the API's log lines; `api.http` walks the role boundaries and the order flow.
+
+**VS Code:** F5 on the "Full stack" compound starts the infrastructure, the API under the .NET debugger and Chrome on `ng serve`.
+**Visual Studio / Rider:** run `scripts/dev-infra.ps1` (or `.sh`) once, then start the Api `http` launch profile and `npm start` in `web`.
+The launch profile does not read `.env`: put the values from the generated `.vscode/api.env` in the Api user-secrets (`:` instead of `__`).
 
 ## Getting started
 
@@ -196,6 +203,7 @@ The web app (nginx, proxying `/api`) listens on http://localhost:8080, the API o
 | `Storage__CreateBucketIfMissing` | Create the private bucket at startup | `true` in Development |
 | `Outbox__Enabled`, `Outbox__PollIntervalMs`, `Outbox__BatchSize`, `Outbox__MaxAttempts` | Dispatcher loop (disable to host it separately) | `true`, `1000`, `20`, `5` |
 | `Pricing__Currency` | Store currency every new price must use | `MXN` |
+| `Dev__ClockOffsetDays` | Shifts the app clock by whole days (Development only; startup fails elsewhere). Tokens and presigned URLs keep the real time | — |
 
 ## Tests
 

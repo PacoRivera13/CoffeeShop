@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CoffeeShop.Application.Messaging;
 using CoffeeShop.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -118,6 +119,23 @@ public sealed class OutboxDispatcher(
             .SetProperty(m => m.Status, OutboxStatus.Done)
             .SetProperty(m => m.ProcessedAt, processedAt), ct);
         WarnIfClaimLost(doneRows, message);
+
+        logger.LogInformation("Handled {MessageType} for order {OrderId} (message {MessageId}, attempt {Attempt})",
+            message.Type, OrderIdOf(message.PayloadJson), message.Id, attempts);
+    }
+
+    /// <summary>The orderId every order event carries; null for a payload without one.</summary>
+    private static int? OrderIdOf(string payloadJson)
+    {
+        try
+        {
+            using var payload = JsonDocument.Parse(payloadJson);
+            return payload.RootElement.TryGetProperty("orderId", out var id) && id.TryGetInt32(out var value) ? value : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

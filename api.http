@@ -1,0 +1,117 @@
+# CoffeeShop API walkthrough for VS Code REST Client and Visual Studio 17.12+.
+# Prerequisites: the local stack (scripts/dev.ps1 or scripts/dev.sh) with the demo seed. Credentials are read from
+# .env with $dotenv; none are stored here. Run the requests top to bottom: later ones reuse earlier responses.
+# Each request states the status it must return.
+
+@baseUrl = http://localhost:5121
+@json = application/json
+# Filled from the named responses below, so send those requests first.
+@adminToken = {{adminLogin.response.body.$.accessToken}}
+@customerToken = {{customerLogin.response.body.$.accessToken}}
+# Index 3 is the demo "Chiapas Altura" (the migration seed holds products 1-3); skus[0] is its 500 g whole bean.
+@chiapasSku = {{products.response.body.$[3].skus[0].id}}
+
+### Liveness and readiness (SQL Server and the storage bucket)
+# expected: 200
+GET {{baseUrl}}/health
+
+### Sign in as the Admin (Admin__Email / Admin__Password in .env)
+# Response: { "accessToken": "...", "tokenType": "Bearer", "expiresIn": 3600 }
+# expected: 200
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{ "email": "{{$dotenv Admin__Email}}", "password": "{{$dotenv Admin__Password}}" }
+
+### Sign in as the demo customer (Seed__CustomerEmail / Seed__CustomerPassword in .env)
+# expected: 200
+# @name customerLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{ "email": "{{$dotenv Seed__CustomerEmail}}", "password": "{{$dotenv Seed__CustomerPassword}}" }
+
+### Catalogue
+# expected: 200
+# @name products
+GET {{baseUrl}}/products
+
+### --- Role boundaries ---
+
+### A customer cannot create prices
+# expected: 403
+POST {{baseUrl}}/prices
+Authorization: Bearer {{customerToken}}
+Content-Type: {{json}}
+
+{ "skuId": {{chiapasSku}}, "amount": 1.00, "currency": "MXN", "effectiveFrom": "2030-01-01" }
+
+### A customer cannot read the admin inventory
+# expected: 403
+GET {{baseUrl}}/admin/inventory
+Authorization: Bearer {{customerToken}}
+
+### Anonymous callers cannot list orders
+# expected: 401
+GET {{baseUrl}}/orders
+
+### The Admin can inspect the outbox (filter with status=Pending|Done|Failed)
+# expected: 200
+GET {{baseUrl}}/admin/outbox?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+### --- Another customer's order is invisible ---
+
+### Register a second customer (a fresh email on every run)
+# expected: 201
+# @name otherRegister
+POST {{baseUrl}}/auth/register
+Content-Type: {{json}}
+
+{ "email": "other-{{$timestamp}}@coffeeshop.local", "password": "LocalOnly-Other-2026!", "name": "Other Customer" }
+
+### Sign the second customer in
+# expected: 200
+# @name otherLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{ "email": "{{otherRegister.response.body.$.email}}", "password": "LocalOnly-Other-2026!" }
+
+### The second customer places an order
+# expected: 201
+# @name otherOrder
+POST {{baseUrl}}/orders
+Authorization: Bearer {{otherLogin.response.body.$.accessToken}}
+Content-Type: {{json}}
+
+{ "items": [{ "skuId": {{chiapasSku}}, "qty": 1 }] }
+
+### The demo customer asks for it: not found, so its existence is not revealed
+# expected: 404
+GET {{baseUrl}}/orders/{{otherOrder.response.body.$.id}}
+Authorization: Bearer {{customerToken}}
+
+### --- Order, pay, invoice ---
+
+### Create an order (the Idempotency-Key makes a retry return the same order)
+# expected: 201
+# @name order
+POST {{baseUrl}}/orders
+Authorization: Bearer {{customerToken}}
+Content-Type: {{json}}
+Idempotency-Key: api-http-{{$timestamp}}
+
+{ "items": [{ "skuId": {{chiapasSku}}, "qty": 1 }] }
+
+### Pay it
+# expected: 200
+POST {{baseUrl}}/orders/{{order.response.body.$.id}}/pay
+Authorization: Bearer {{customerToken}}
+
+### Invoice: a presigned URL valid for 5 minutes. Sent within a second or two of paying it answers 202 with
+# Retry-After: 2 while the dispatcher renders the PDF; send it again.
+# expected: 200
+GET {{baseUrl}}/orders/{{order.response.body.$.id}}/invoice
+Authorization: Bearer {{customerToken}}

@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build api",
+      "program": "${workspaceFolder}/src/Api/bin/Debug/net10.0/CoffeeShop.Api.dll",
+      "cwd": "${workspaceFolder}/src/Api",
+      "envFile": "${workspaceFolder}/.vscode/api.env",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5121"
+      },
+      "justMyCode": true,
+      "stopAtEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Web (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/web",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack",
+      "configurations": ["API", "Web (Chrome)"],
+      "preLaunchTask": "full stack: prepare",
+      "stopAll": true
+    }
+  ]
+}
