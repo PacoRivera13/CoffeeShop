@@ -73,10 +73,39 @@ describe('AppShellComponent', () => {
     await expect.element(page.getByTestId('cart-button')).not.toBeInTheDocument();
   });
 
-  it('adds the admin link for admins', async () => {
-    await render('admin', 1280);
+  it('gives admins an Admin menu on expanded screens', async () => {
+    const { fixture } = await render('admin', 1280);
+    await fixture.whenStable();
 
-    await expect.element(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+    await page.getByRole('button', { name: 'Admin' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Prices' })).toHaveAttribute('href', '/admin/prices');
+    await expect.element(page.getByRole('menuitem', { name: 'Inventory' })).toBeVisible();
+  });
+
+  it('gives admins an Admin section in the drawer on compact screens', async () => {
+    const { fixture } = await render('admin', 360);
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await fixture.whenStable();
+
+    await expect.element(page.getByTestId('drawer-admin-heading')).toHaveTextContent('Admin');
+    const section = page.getByRole('group', { name: 'Admin' });
+    await expect.element(section.getByRole('link', { name: 'Prices' })).toHaveAttribute('href', '/admin/prices');
+    await expect.element(section.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/admin/inventory');
+  });
+
+  it('shows no admin navigation to customers on either layout', async () => {
+    for (const width of [360, 1280]) {
+      TestBed.resetTestingModule();
+      const { fixture } = await render('customer', width);
+      if (width === 360) {
+        await page.getByRole('button', { name: 'Open navigation' }).click();
+        await fixture.whenStable();
+      }
+
+      await expect.element(page.getByTestId('admin-menu-button')).not.toBeInTheDocument();
+      await expect.element(page.getByTestId('drawer-admin-heading')).not.toBeInTheDocument();
+    }
   });
 
   it('labels the cart with its item count', async () => {

@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { expectMinTouchTarget, expectNoHorizontalOverflow, mockCatalog, signInAs } from '../support/helpers';
+import { priceHistory } from '../../testing/fixtures';
+import { expectMinTouchTarget, expectNoHorizontalOverflow, mockApi, mockCatalog, signInAs } from '../support/helpers';
 
 test.describe('App shell', () => {
   test.beforeEach(async ({ page }) => {
     await signInAs(page, 'Admin');
     await mockCatalog(page);
+    await mockApi(page, 'GET', '/skus/11/prices', 200, priceHistory);
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();
   });
@@ -14,16 +16,20 @@ test.describe('App shell', () => {
       await expect(page.getByTestId('inline-nav')).toHaveCount(0);
       await page.getByRole('button', { name: 'Open navigation' }).click();
 
-      const drawer = page.getByRole('navigation', { name: 'Main menu' });
-      await expect(drawer.getByRole('link', { name: 'Admin' })).toBeVisible();
-      await drawer.getByRole('link', { name: 'Admin' }).click();
-      await expect(page).toHaveURL('/admin');
+      const admin = page.getByRole('navigation', { name: 'Main menu' }).getByRole('group', { name: 'Admin' });
+      await expect(admin.getByRole('link', { name: 'Inventory' })).toBeVisible();
+      await admin.getByRole('link', { name: 'Prices' }).click();
+      await expect(page).toHaveURL('/admin/prices');
     } else {
       await expect(page.getByRole('button', { name: 'Open navigation' })).toHaveCount(0);
       const nav = page.getByRole('navigation', { name: 'Main', exact: true });
       await expect(nav.getByRole('link', { name: 'Shop' })).toBeVisible();
-      await expect(nav.getByRole('link', { name: 'Admin' })).toBeVisible();
+      await nav.getByRole('button', { name: 'Admin' }).click();
+      await expect(page.getByRole('menuitem', { name: 'Inventory' })).toBeVisible();
+      await page.getByRole('menuitem', { name: 'Prices' }).click();
+      await expect(page).toHaveURL('/admin/prices');
     }
+    await expect(page.getByRole('heading', { level: 1, name: 'Prices' })).toBeVisible();
   });
 
   test('logout and the theme toggle are always reachable', async ({ page }) => {
@@ -44,7 +50,7 @@ test.describe('App shell', () => {
       await page.getByRole('button', { name: 'Open navigation' }).click();
       const drawer = page.getByRole('navigation', { name: 'Main menu' });
       await expect(drawer.getByRole('link', { name: 'Shop' })).toBeVisible();
-      targets.push(drawer.getByRole('link', { name: 'Shop' }), drawer.getByRole('link', { name: 'Admin' }));
+      targets.push(drawer.getByRole('link', { name: 'Shop' }), drawer.getByRole('link', { name: 'Prices' }));
 
       for (const target of targets) await expectMinTouchTarget(target);
 
@@ -58,5 +64,26 @@ test.describe('App shell', () => {
 
   test('has no horizontal overflow', async ({ page }) => {
     await expectNoHorizontalOverflow(page);
+  });
+});
+
+test.describe('App shell for customers', () => {
+  test('shows no admin navigation on either layout', async ({ page }, testInfo) => {
+    await signInAs(page, 'Customer');
+    await mockCatalog(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();
+
+    if (testInfo.project.name === 'mobile') {
+      await page.getByRole('button', { name: 'Open navigation' }).click();
+      const drawer = page.getByRole('navigation', { name: 'Main menu' });
+      await expect(drawer.getByRole('link', { name: 'Orders' })).toBeVisible();
+      await expect(drawer.getByRole('group', { name: 'Admin' })).toHaveCount(0);
+    } else {
+      const nav = page.getByRole('navigation', { name: 'Main', exact: true });
+      await expect(nav.getByRole('link', { name: 'Orders' })).toBeVisible();
+    }
+    await expect(page.getByRole('button', { name: 'Admin' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Prices' })).toHaveCount(0);
   });
 });

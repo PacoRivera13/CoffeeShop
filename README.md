@@ -1,6 +1,6 @@
 # CoffeeShop
 
-Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) has its foundation (design system, auth, sign-in pages) and the customer flow (catalogue, cart, checkout, orders, invoices).
+Backend for a specialty coffee shop: a catalogue with time-based pricing, customer orders with gram-based stock reservation, a transactional outbox, and PDF invoices stored in S3-compatible storage. It is the baseline for a .NET + Angular application; the Angular front end (`/web`) has its foundation (design system, auth, sign-in pages) the customer flow (catalogue, cart, checkout, orders, invoices) and the admin screens (prices, inventory).
 
 ## Status
 
@@ -16,7 +16,7 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 4b | Invoice download with presigned URLs; MXN as store currency | Done |
 | 5a | Angular foundation: "Roastery" Material 3 design system, generated API client, auth, app shell, sign-in and register | Done |
 | 5b | Customer flow: catalogue with live prices, cart, idempotent checkout, orders, order detail with pay/cancel and invoice polling | Done |
-| — | Angular admin pages | Not started |
+| 5c | Admin prices and inventory screens, nginx web container, full-stack purchase spec | Done |
 
 224 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
 
@@ -169,7 +169,7 @@ ConnectionStrings__Default="Server=127.0.0.1,1433;Database=CoffeeShop;User Id=sa
   dotnet ef database update -p src/Infrastructure -s src/Api
 ```
 
-The API listens on http://localhost:8080 and the MinIO console on http://localhost:9001. Migrations are not applied at startup; the `api` container restarts until the database and MinIO are ready.
+The web app (nginx, proxying `/api`) listens on http://localhost:8080, the API on http://localhost:8081 and the MinIO console on http://localhost:9001. Migrations are not applied at startup; the `api` container restarts until the database and MinIO are ready.
 
 ## Configuration
 
@@ -199,6 +199,7 @@ npm ci
 npm run e2e:install    # Chromium for both test layers, inside node_modules
 npm test               # coverage check + Vitest component tests in Chromium
 npm run e2e            # Playwright page tests, desktop and mobile, API mocked
+npm run e2e:full       # purchase flow against the compose stack; needs E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD
 npm start              # http://localhost:4200, /api proxied to the API on :5121
 ```
 
@@ -213,13 +214,12 @@ src/Infrastructure   EF Core, Identity, outbox and bus, S3 storage, invoices, mi
 src/Api              Minimal API endpoints, auth, OpenAPI, Dockerfile
 tests/*.Tests        Domain, Application, Infrastructure and Api (integration) tests
 web/                 Angular app: src/app (core, layout, shared, pages, generated api), e2e, testing/fixtures
-docker-compose.yml   sqlserver, minio, api
+docker-compose.yml   sqlserver, minio, api, web (nginx)
 openapi.json         Committed API contract, kept in sync by a test
 ```
 
 ## Next steps
 
-- Angular admin pages; an nginx web container in Docker Compose.
 - Login lockout and rate limiting; refresh tokens.
 - Retention job for processed outbox messages and inbox markers.
 - Retry on deadlocks for every write path (EF execution strategy).

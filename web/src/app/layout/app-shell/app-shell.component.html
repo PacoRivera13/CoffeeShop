@@ -16,6 +16,24 @@
           {{ link.label }}
         </a>
       }
+      @if (adminLinks().length > 0) {
+        <h2 class="drawer-heading" id="drawer-admin-heading" data-testid="drawer-admin-heading">Admin</h2>
+        <div class="drawer-section" role="group" aria-labelledby="drawer-admin-heading">
+          @for (link of adminLinks(); track link.path) {
+            <a
+              mat-button
+              class="drawer-link"
+              data-testid="drawer-admin-link"
+              [routerLink]="link.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              (click)="drawer.close()"
+            >
+              {{ link.label }}
+            </a>
+          }
+        </div>
+      }
     </nav>
   </mat-sidenav>
 
@@ -49,6 +67,12 @@
               >
                 {{ link.label }}
               </a>
+            }
+            @if (adminLinks().length > 0) {
+              <!-- MatMenu is only needed by admins, so it stays out of the initial bundle. -->
+              @defer (on immediate) {
+                <app-admin-menu [links]="adminLinks()" />
+              }
             }
           </nav>
         }

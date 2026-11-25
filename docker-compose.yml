@@ -47,6 +47,17 @@ services:
       Storage__SecretKey: ${MINIO_PASSWORD}
       Storage__CreateBucketIfMissing: "true"
     ports:
+      # Direct access for tools and Swagger; the browser app reaches the API through the web service.
+      - "127.0.0.1:8081:8080"
+
+  # The Angular app on nginx; /api is proxied to the api service (web/nginx.conf).
+  web:
+    build:
+      context: ./web
+    depends_on:
+      - api
+    restart: on-failure
+    ports:
       - "127.0.0.1:8080:8080"
 
 volumes:

@@ -80,3 +80,10 @@
 - Order lines and stock errors carry ids only; the web resolves product names from the catalogue (falling back to "SKU n").
 - The invoice opens with window.open(url, '_blank', 'noopener') and also stays available as a link, since a popup after polling may be blocked.
 - Initial bundle warning budget is 550 kB (error stays at 1 MB): esbuild hoists framework modules shared with the lazy pages into main.
+- Docker Compose now serves the web app on :8080 (nginx, /api proxied like the dev proxy); the API moved to host port 8081.
+- The admin price form limits effectiveFrom to today in UTC (the API's rule), so late-evening admins west of UTC cannot pick their local today.
+- Price history is sorted newest first in the client; the API returns it in no guaranteed order.
+- "Low stock" means below LOW_STOCK_THRESHOLD_G = 2000 g (web/src/app/features/admin/admin-rules.ts).
+- The admin menu (MatMenu) is loaded with @defer only for admins, keeping it out of the initial bundle.
+- The @full purchase spec runs only through `npm run e2e:full` (project "full", no dev server); `npm run e2e` runs desktop and mobile only.
+- Full-stack admin credentials come from E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD, which must match the stack's Admin__Email / Admin__Password.

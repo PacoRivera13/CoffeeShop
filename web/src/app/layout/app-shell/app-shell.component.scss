@@ -26,6 +26,17 @@
   min-height: 48px;
 }
 
+.drawer-heading {
+  margin: 16px 12px 4px;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.drawer-section {
+  display: grid;
+  gap: 4px;
+}
+
 .drawer-link.active,
 .inline-nav .active {
   background: var(--mat-sys-secondary-container);

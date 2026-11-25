@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { admin, customer, invalidCredentials, loginResponse } from '../../testing/fixtures';
-import { expectAccessibleInBothSchemes, expectNoHorizontalOverflow, mockApi } from '../support/helpers';
+import { admin, customer, invalidCredentials, loginResponse, priceHistory } from '../../testing/fixtures';
+import { expectAccessibleInBothSchemes, expectNoHorizontalOverflow, mockApi, mockCatalog } from '../support/helpers';
 
 test.describe('Login page', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,13 +20,15 @@ test.describe('Login page', () => {
 
   test('an admin is redirected to the admin area', async ({ page }) => {
     await mockApi(page, 'POST', '/auth/login', 200, loginResponse('Admin'));
+    await mockCatalog(page);
+    await mockApi(page, 'GET', '/skus/11/prices', 200, priceHistory);
 
     await page.getByLabel('Email').fill(admin.email);
     await page.getByLabel('Password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
 
-    await expect(page).toHaveURL('/admin');
-    await expect(page.getByRole('heading', { level: 1, name: 'Admin' })).toBeVisible();
+    await expect(page).toHaveURL('/admin/prices');
+    await expect(page.getByRole('heading', { level: 1, name: 'Prices' })).toBeVisible();
   });
 
   test('wrong credentials show the server error and stay on the page', async ({ page }) => {

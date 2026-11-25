@@ -31,8 +31,22 @@ export const routes: Routes = [
   {
     path: 'admin',
     canActivate: [authGuard, adminGuard],
-    title: 'Admin · Roastery',
-    loadComponent: () => import('./pages/admin/admin-page.component').then((m) => m.AdminPageComponent),
+    canActivateChild: [adminGuard],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'prices' },
+      {
+        path: 'prices',
+        title: 'Prices · Admin · Roastery',
+        loadComponent: () =>
+          import('./pages/admin-prices/admin-prices-page.component').then((m) => m.AdminPricesPageComponent),
+      },
+      {
+        path: 'inventory',
+        title: 'Inventory · Admin · Roastery',
+        loadComponent: () =>
+          import('./pages/admin-inventory/admin-inventory-page.component').then((m) => m.AdminInventoryPageComponent),
+      },
+    ],
   },
   {
     path: 'login',

@@ -9,7 +9,8 @@
     "test": "npm run test:coverage-check && cross-env PLAYWRIGHT_BROWSERS_PATH=0 ng test --no-watch",
     "gen:api": "ng-openapi-gen --config ng-openapi-gen.json",
     "test:coverage-check": "node scripts/coverage-check.mjs",
-    "e2e": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test",
+    "e2e": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test --project=desktop --project=mobile",
+    "e2e:full": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 E2E_FULL=1 playwright test --project=full",
     "e2e:install": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium"
   },
   "private": true,

@@ -1,59 +1,15 @@
-# Web
-
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.3.0.
-
-## Development server
-
-To start a local development server, run:
+# Roastery web (Angular)
 
 ```bash
-ng serve
+npm start          # ng serve on http://localhost:4200, /api proxied to the API on :5121
+npm test           # coverage check + Vitest component specs in Chromium
+npm run e2e        # Playwright page specs, desktop and mobile, API mocked
+npm run e2e:full   # @full purchase flow against `docker compose up` (E2E_BASE_URL, default http://localhost:8080;
+                   # E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD = the stack's Admin__Email / Admin__Password)
+npm run gen:api    # regenerate src/app/api from ../openapi.json
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+**Design system.** "Roastery" is Angular Material 3 with cream surfaces, Fraunces headings and Inter body text, all
+self-hosted. The theme lives in `src/styles.scss` (`mat.theme` plus surface overrides), the palettes in
+`src/styles/_theme-colors.scss` and the breakpoints in `src/styles/_breakpoints.scss`; components use only the
+`--mat-sys-*` tokens, never raw colors, and are mobile-first with 44px touch targets on compact screens.

@@ -11,6 +11,7 @@ import { filter, map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { breakpointQueries } from '../../core/layout/breakpoints';
 import { ThemeToggleComponent } from '../../shared/theme-toggle/theme-toggle.component';
+import { AdminMenuComponent } from '../admin-menu/admin-menu.component';
 import { CartSummaryBarComponent } from '../cart-summary-bar/cart-summary-bar.component';
 
 export interface NavLink {
@@ -22,6 +23,7 @@ export interface NavLink {
   selector: 'app-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    AdminMenuComponent,
     CartSummaryBarComponent,
     MatBadgeModule,
     MatButtonModule,
@@ -80,13 +82,22 @@ export class AppShellComponent {
       { label: 'Shop', path: '/' },
       { label: 'Orders', path: '/orders' },
     ];
-    if (this.auth.isAdmin()) return [...shop, { label: 'Admin', path: '/admin' }];
     if (this.auth.isAuthenticated()) return shop;
     return [
       { label: 'Sign in', path: '/login' },
       { label: 'Create account', path: '/register' },
     ];
   });
+
+  /** Admin pages: a menu on expanded screens, a drawer section on compact ones; nothing for customers. */
+  protected readonly adminLinks = computed<NavLink[]>(() =>
+    this.auth.isAdmin()
+      ? [
+          { label: 'Prices', path: '/admin/prices' },
+          { label: 'Inventory', path: '/admin/inventory' },
+        ]
+      : [],
+  );
 
   protected readonly cartLabel = computed(() => `Cart, ${this.cartCount()} ${this.cartCount() === 1 ? 'item' : 'items'}`);
 
