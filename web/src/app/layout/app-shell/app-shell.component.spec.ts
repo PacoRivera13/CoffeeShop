@@ -67,6 +67,8 @@ describe('AppShellComponent', () => {
   it('shows sign-in links to anonymous visitors and hides account actions', async () => {
     await render('anonymous', 1280);
 
+    await expect.element(page.getByTestId('nav-link').first()).toHaveTextContent('Shop');
+    await expect.element(page.getByRole('link', { name: 'Orders' })).not.toBeInTheDocument();
     await expect.element(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
     await expect.element(page.getByRole('link', { name: 'Create account' })).toBeVisible();
     await expect.element(page.getByTestId('logout-button')).not.toBeInTheDocument();

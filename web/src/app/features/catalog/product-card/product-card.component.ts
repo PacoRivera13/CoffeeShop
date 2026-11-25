@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { RouterLink } from '@angular/router';
 import { catchError, combineLatest, map, Observable, of, startWith, switchMap } from 'rxjs';
 import { getSkuPrice } from '../../../api/fn/catalog/get-sku-price';
 import { PriceResponse } from '../../../api/models/price-response';
@@ -36,6 +37,7 @@ let nextId = 0;
     MatProgressBarModule,
     PriceBadgeComponent,
     ProductImageComponent,
+    RouterLink,
     SkuPickerComponent,
   ],
   template: `
@@ -76,10 +78,17 @@ let nextId = 0;
         </div>
       </mat-card-content>
       <mat-card-actions class="actions">
-        <button mat-flat-button type="button" data-testid="add-to-cart" [disabled]="!canAdd()" (click)="add()">
-          <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
-          Add to cart
-        </button>
+        @if (canBuy()) {
+          <button mat-flat-button type="button" data-testid="add-to-cart" [disabled]="!canAdd()" (click)="add()">
+            <mat-icon aria-hidden="true">add_shopping_cart</mat-icon>
+            Add to cart
+          </button>
+        } @else {
+          <a mat-stroked-button data-testid="sign-in-to-buy" routerLink="/login" [queryParams]="{ returnUrl: '/' }">
+            <mat-icon aria-hidden="true">login</mat-icon>
+            Sign in to buy
+          </a>
+        }
       </mat-card-actions>
     </mat-card>
   `,
@@ -127,7 +136,8 @@ let nextId = 0;
     .actions {
       padding: 8px 16px 16px;
     }
-    .actions button {
+    .actions button,
+    .actions a {
       width: 100%;
       min-height: 44px;
     }
@@ -137,6 +147,8 @@ export class ProductCardComponent {
   private readonly api = inject(ApiRx);
 
   readonly product = input.required<ProductResponse>();
+  /** False for anonymous visitors: the card offers "Sign in to buy" instead of "Add to cart". */
+  readonly canBuy = input(true);
   /** Prices as of this instant (ISO 8601); omitted means now. */
   readonly asOf = input<string | undefined>(undefined);
   readonly added = output<CartItem>();

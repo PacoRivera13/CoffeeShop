@@ -99,3 +99,5 @@
 - GET /admin/outbox lists newest OccurredAt first; status is optional and case-insensitive; pageSize is capped at 100.
 - The Development console uses a custom "correlation" formatter: time, level, short category, [correlation id], message; other scopes are dropped.
 - api.http uses REST Client request-variable syntax (also Visual Studio); httpyac does not support it, so it was verified by replaying the same requests with a script.
+- The catalogue page is public (GET /products was already anonymous); anonymous cards show "Sign in to buy" linking to /login?returnUrl=/, while cart, orders and admin stay behind authGuard.
+- The full-stack purchase spec locates the product by position (first in id order), since product names are not unique once the demo seed runs.

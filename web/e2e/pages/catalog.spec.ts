@@ -10,11 +10,27 @@ import {
 } from '../support/helpers';
 
 test.describe('Catalog page', () => {
-  test('anonymous visitors are sent to sign in, keeping where they were going', async ({ page }) => {
+  test('anonymous visitors browse prices and are asked to sign in to buy', async ({ page }) => {
+    await mockCatalog(page);
     await page.goto('/');
+
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();
+    const ethiopia = page.getByRole('article', { name: 'Ethiopia Yirgacheffe' });
+    await expect(ethiopia.getByTestId('price')).toContainText('300.00');
+    await expect(ethiopia.getByRole('button', { name: 'Add to cart' })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+
+    await ethiopia.getByRole('link', { name: 'Sign in to buy' }).click();
 
     await expect(page).toHaveURL(/\/login\?returnUrl=%2F$/);
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  });
+
+  test('the cart still requires signing in', async ({ page }) => {
+    await page.goto('/cart');
+
+    await expect(page).toHaveURL(/\/login\?returnUrl=%2Fcart$/);
   });
 
   test.describe('signed in', () => {

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { rxResource } from '@angular/core/rxjs-interop';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../core/auth/auth.service';
 import { CartItem, CartService, MAX_QTY } from '../../core/cart/cart.service';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { ProductCardComponent } from '../../features/catalog/product-card/product-card.component';
@@ -26,7 +27,7 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
       } @else {
         <ul class="grid" aria-label="Products">
           @for (product of products.value(); track product.id) {
-            <li><app-product-card [product]="product" [asOf]="asOf()" (added)="addToCart($event)" /></li>
+            <li><app-product-card [product]="product" [asOf]="asOf()" [canBuy]="auth.isAuthenticated()" (added)="addToCart($event)" /></li>
           }
         </ul>
       }
@@ -67,6 +68,7 @@ import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.com
   `,
 })
 export class CatalogPageComponent {
+  protected readonly auth = inject(AuthService);
   private readonly cart = inject(CartService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly catalog = inject(CatalogService);

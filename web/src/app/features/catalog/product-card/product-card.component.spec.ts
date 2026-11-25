@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { page } from 'vitest/browser';
 import { price, products } from '../../../../../testing/fixtures';
@@ -10,12 +11,13 @@ import { ProductCardComponent } from './product-card.component';
 describe('ProductCardComponent', () => {
   let http: HttpTestingController;
 
-  async function render(asOf?: string) {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+  async function render(asOf?: string, canBuy?: boolean) {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
     http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(ProductCardComponent);
     fixture.componentRef.setInput('product', products[0]);
     if (asOf) fixture.componentRef.setInput('asOf', asOf);
+    if (canBuy !== undefined) fixture.componentRef.setInput('canBuy', canBuy);
     const added = vi.fn();
     fixture.componentInstance.added.subscribe(added);
     await fixture.whenStable();
@@ -25,6 +27,16 @@ describe('ProductCardComponent', () => {
   const priceRequest = (skuId: number) => http.expectOne((r) => r.url.endsWith(`/skus/${skuId}/price`));
 
   afterEach(() => http.verify());
+
+  it('asks anonymous visitors to sign in instead of offering Add to cart', async () => {
+    await render(undefined, false);
+    priceRequest(11).flush(price(11, 300));
+
+    const signIn = page.getByRole('link', { name: 'Sign in to buy' });
+    await expect.element(signIn).toHaveAttribute('href', '/login?returnUrl=%2F');
+    await expect.element(page.getByRole('button', { name: 'Add to cart' })).not.toBeInTheDocument();
+    await expect.element(page.getByTestId('price')).toMatchTextContent(/300\.00/);
+  });
 
   it('shows the product, a loading placeholder, then the price of the first SKU', async () => {
     const { fixture } = await render();

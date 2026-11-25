@@ -84,6 +84,7 @@ export class AppShellComponent {
     ];
     if (this.auth.isAuthenticated()) return shop;
     return [
+      shop[0],
       { label: 'Sign in', path: '/login' },
       { label: 'Create account', path: '/register' },
     ];

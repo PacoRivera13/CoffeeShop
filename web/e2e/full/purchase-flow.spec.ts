@@ -62,6 +62,9 @@ test('a customer buys coffee priced and stocked by an admin, and downloads the i
   await signIn(page, adminEmail, adminPassword);
 
   // The prices page opens on the catalogue's first SKU, which is also the one the catalog card preselects.
+  // Product names are not unique (the demo seed adds a second Yirgacheffe), so cards and stock rows are located by
+  // position: the catalogue, the prices page and the inventory all list products in id order.
+  const firstCard = () => page.getByTestId('product-card').first();
   const { productName, todayPrice } = await test.step('admin schedules a price for tomorrow', async () => {
     await page.goto('/admin/prices');
     const current = page.getByRole('table', { name: 'Price history' }).getByTestId('price-row').filter({
@@ -87,14 +90,15 @@ test('a customer buys coffee priced and stocked by an admin, and downloads the i
 
   await test.step('the catalog still shows today\'s price', async () => {
     await page.goto('/');
-    const card = page.getByRole('article', { name: productName });
+    const card = firstCard();
+    await expect(card.getByTestId('product-name')).toHaveText(productName);
     await expect(card.getByTestId('price')).toHaveText(todayPrice);
   });
 
   await test.step('admin restocks the product', async () => {
     await page.goto('/admin/inventory');
-    await page.getByRole('button', { name: `Manage ${productName}` }).click();
-    const row = page.getByTestId('stock-row').filter({ hasText: productName });
+    const row = page.getByTestId('stock-row').first();
+    await row.getByRole('button', { name: `Manage ${productName}` }).click();
     const before = amountOf((await row.getByTestId('stock-grams').textContent())!);
     await page.getByLabel('Grams to add').fill('5000');
     await page.getByRole('button', { name: `Restock ${productName}` }).click();
@@ -106,7 +110,8 @@ test('a customer buys coffee priced and stocked by an admin, and downloads the i
 
   await test.step('the customer orders and pays', async () => {
     await page.goto('/');
-    const card = page.getByRole('article', { name: productName });
+    const card = firstCard();
+    await expect(card.getByTestId('product-name')).toHaveText(productName);
     await expect(card.getByTestId('price')).toHaveText(todayPrice);
     await card.getByRole('button', { name: 'Add to cart' }).click();
     await page.getByTestId('cart-button').click();

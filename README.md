@@ -19,8 +19,9 @@ Backend for a specialty coffee shop: a catalogue with time-based pricing, custom
 | 5c | Admin prices and inventory screens, nginx web container, full-stack purchase spec | Done |
 | 6a | Demo seeder (Development only) and one-command local environment | Done |
 | 6b | Debug configs, dev clock, admin outbox and health endpoints, api.http, correlation-id request logs | Done |
+| 6c | Manual test plan, verification of all suites against the local stack, public catalogue | Done |
 
-253 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 56 web component tests (Vitest in Chromium) and 50 page tests (Playwright, desktop and mobile).
+253 backend tests (domain, application, infrastructure and HTTP integration against real SQL Server and MinIO containers), plus 144 web component tests (Vitest in Chromium), 152 Playwright page-test runs (desktop and mobile, API mocked) and a full-stack purchase spec.
 
 ## Tech stack
 
@@ -122,7 +123,7 @@ erDiagram
 - Outbox delivery is at-least-once; handlers are idempotent through `ProcessedMessage` and deterministic keys.
 - Invoices are demo receipts (not fiscal documents); download links are presigned and expire after 5 minutes.
 
-Full rules live in [CLAUDE.MD](CLAUDE.MD); design decisions and trade-offs in [DECISIONS.md](DECISIONS.md).
+Full rules live in [CLAUDE.MD](CLAUDE.MD); design decisions and trade-offs in [DECISIONS.md](DECISIONS.md). Manual checks are in [docs/manual-test-plan.md](docs/manual-test-plan.md); deferred defects in [docs/known-issues.md](docs/known-issues.md).
 
 ## API
 

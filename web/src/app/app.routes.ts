@@ -5,7 +5,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    canActivate: [authGuard],
+    // Public: GET /products is anonymous; buying (cart, orders) still requires signing in.
     title: 'Shop · Roastery',
     loadComponent: () => import('./pages/catalog/catalog-page.component').then((m) => m.CatalogPageComponent),
   },
