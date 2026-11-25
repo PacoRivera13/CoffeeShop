@@ -120,8 +120,10 @@ public sealed class OutboxDispatcher(
             .SetProperty(m => m.ProcessedAt, processedAt), ct);
         WarnIfClaimLost(doneRows, message);
 
-        logger.LogInformation("Handled {MessageType} for order {OrderId} (message {MessageId}, attempt {Attempt})",
-            message.Type, OrderIdOf(message.PayloadJson), message.Id, attempts);
+        // The payload is parsed only for this line, so skip it when Information is off.
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Handled {MessageType} for order {OrderId} (message {MessageId}, attempt {Attempt})",
+                message.Type, OrderIdOf(message.PayloadJson), message.Id, attempts);
     }
 
     /// <summary>The orderId every order event carries; null for a payload without one.</summary>

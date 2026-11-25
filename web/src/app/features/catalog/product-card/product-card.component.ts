@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { catchError, combineLatest, map, Observable, of, startWith, switchMap } from 'rxjs';
 import { getSkuPrice } from '../../../api/fn/catalog/get-sku-price';
 import { PriceResponse } from '../../../api/models/price-response';
@@ -84,7 +84,7 @@ let nextId = 0;
             Add to cart
           </button>
         } @else {
-          <a mat-stroked-button data-testid="sign-in-to-buy" routerLink="/login" [queryParams]="{ returnUrl: '/' }">
+          <a mat-stroked-button data-testid="sign-in-to-buy" routerLink="/login" [queryParams]="{ returnUrl: router.url }">
             <mat-icon aria-hidden="true">login</mat-icon>
             Sign in to buy
           </a>
@@ -145,6 +145,8 @@ let nextId = 0;
 })
 export class ProductCardComponent {
   private readonly api = inject(ApiRx);
+  /** The current URL (with ?asOf=) is where "Sign in to buy" returns to. */
+  protected readonly router = inject(Router);
 
   readonly product = input.required<ProductResponse>();
   /** False for anonymous visitors: the card offers "Sign in to buy" instead of "Add to cart". */

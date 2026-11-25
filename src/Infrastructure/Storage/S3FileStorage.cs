@@ -77,29 +77,44 @@ public sealed class S3FileStorage : IFileStorage, IDisposable
         }
     }
 
-    public async Task<Uri> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct)
+    public async Task<DownloadUrl> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct)
     {
         if (expires <= TimeSpan.Zero || expires > MaxUrlLifetime)
             throw new ArgumentOutOfRangeException(nameof(expires), expires, $"Download URLs must expire within {MaxUrlLifetime.TotalDays} days.");
 
+        var expiresAt = _clock.GetUtcNow() + expires;
         var url = await _presigner.GetPreSignedURLAsync(new GetPreSignedUrlRequest
         {
             BucketName = _bucket,
             Key = key,
             Verb = HttpVerb.GET,
-            Expires = _clock.GetUtcNow().UtcDateTime.Add(expires),
+            Expires = expiresAt.UtcDateTime,
             Protocol = _presigner.Config.UseHttp ? Protocol.HTTP : Protocol.HTTPS,
         });
-        return new Uri(url);
+        return new DownloadUrl(new Uri(url), expiresAt);
+    }
+
+    /// <summary>
+    /// Lists at most one key: it proves the endpoint answers, the credentials may read the bucket and the bucket exists,
+    /// and it honours cancellation, so a timed-out readiness check leaves no request behind.
+    /// </summary>
+    public async Task<bool> IsReadyAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = _bucket, MaxKeys = 1 }, ct);
+            return true;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
+        {
+            return false;
+        }
     }
 
     public async Task DeleteAsync(string key, CancellationToken ct) =>
         await _client.DeleteObjectAsync(_bucket, key, ct);
 
     /// <summary>Creates the bucket when it is missing. It gets no policy, so it stays private.</summary>
-    /// <summary>True when the configured bucket exists and the credentials can reach it.</summary>
-    public Task<bool> BucketExistsAsync() => Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_client, _bucket);
-
     public async Task EnsureBucketAsync(CancellationToken ct)
     {
         try

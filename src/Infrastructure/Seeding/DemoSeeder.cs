@@ -23,6 +23,7 @@ public static class DemoSeeder
 {
     public const string FlagKey = "Seed:Demo";
     public const string MarkerProduct = "Chiapas Altura";
+    private const string CancelledKey = "demo-cancelled";
 
     private sealed record DemoProduct(string Name, string Origin, string Roast, decimal Price500, decimal Price1000, int StockG);
 
@@ -47,7 +48,10 @@ public static class DemoSeeder
                 "Remove Seed__Demo to start in this environment.");
     }
 
-    /// <summary>Seeds the demo catalogue, stock, customer and orders once; skips when the marker product exists.</summary>
+    /// <summary>
+    /// Seeds the demo catalogue, stock, customer and orders. Every step is resumable, so a run that failed half-way is
+    /// completed by the next one; a finished seed (its last order exists) is skipped.
+    /// </summary>
     public static async Task SeedDemoAsync(
         this IServiceProvider services, IConfiguration configuration, IHostEnvironment environment, CancellationToken ct = default)
     {
@@ -65,7 +69,7 @@ public static class DemoSeeder
         var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DemoSeeder));
         var db = sp.GetRequiredService<CoffeeShopDbContext>();
 
-        if (await db.Products.AnyAsync(p => p.Name == MarkerProduct, ct))
+        if (await IsCompleteAsync(db, email, ct))
         {
             logger.LogInformation("Demo data already present; skipping the demo seed.");
             return;
@@ -75,12 +79,35 @@ public static class DemoSeeder
         var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
         var currency = sp.GetRequiredService<PricingSettings>().Currency;
 
-        var (productIds, skus) = await SeedCatalogueAsync(db, currency, today, ct);
+        var (productIds, skus) = await db.Products.AnyAsync(p => p.Name == MarkerProduct, ct)
+            ? await LoadCatalogueAsync(db, ct)
+            : await SeedCatalogueAsync(db, currency, today, ct);
         await SeedStockAsync(sp, productIds, today.AddDays(-90), ct);
         var userId = await EnsureCustomerAsync(sp, email, password, ct);
         await SeedOrdersAsync(sp, db, userId, skus, now, ct);
 
         logger.LogInformation("Demo data seeded: {Products} products and 4 orders for the demo customer.", Catalogue.Length);
+    }
+
+    /// <summary>The seed's last step is cancelling this order, so its presence means every earlier step finished.</summary>
+    private static Task<bool> IsCompleteAsync(CoffeeShopDbContext db, string email, CancellationToken ct) =>
+        db.Customers.Where(c => c.Email == email)
+            .Join(db.Orders, c => c.Id, o => o.CustomerId, (_, o) => o)
+            .AnyAsync(o => o.IdempotencyKey == CancelledKey && o.Status == OrderStatus.Cancelled, ct);
+
+    /// <summary>Ids of a catalogue committed by an earlier run (it is written in one transaction, so it is whole).</summary>
+    private static async Task<(Dictionary<string, int> ProductIds, Dictionary<(string, Grind, int), int> SkuIds)> LoadCatalogueAsync(
+        CoffeeShopDbContext db, CancellationToken ct)
+    {
+        var names = Catalogue.Select(d => d.Name).ToList();
+        // The migration seed has its own Yirgacheffe with a lower id; the demo product is the newest of each name.
+        var productIds = await db.Products.Where(p => names.Contains(p.Name))
+            .GroupBy(p => p.Name).Select(g => new { Name = g.Key, Id = g.Max(p => p.Id) })
+            .ToDictionaryAsync(p => p.Name, p => p.Id, ct);
+        var ids = productIds.Values.ToList();
+        var skus = await db.Skus.Where(s => ids.Contains(s.ProductId)).ToListAsync(ct);
+        return (productIds, skus.ToDictionary(
+            s => (productIds.Single(p => p.Value == s.ProductId).Key, s.Grind, s.SizeG), s => s.Id));
     }
 
     private static async Task<(Dictionary<string, int> ProductIds, Dictionary<(string, Grind, int), int> SkuIds)> SeedCatalogueAsync(
@@ -124,8 +151,13 @@ public static class DemoSeeder
         IServiceProvider sp, IReadOnlyDictionary<string, int> productIds, DateTimeOffset at, CancellationToken ct)
     {
         var inventory = ActivatorUtilities.CreateInstance<InventoryService>(sp, new FixedTimeProvider(at));
+        var db = sp.GetRequiredService<CoffeeShopDbContext>();
         foreach (var demo in Catalogue)
         {
+            // Restocked by an earlier, interrupted run.
+            if (await db.Inventories.AnyAsync(i => i.ProductId == productIds[demo.Name], ct))
+                continue;
+
             var result = await inventory.RestockAsync(productIds[demo.Name], demo.StockG, ct);
             if (result is not RestockResult.Done)
                 throw new InvalidOperationException($"Demo restock of {demo.Name} failed: {result}.");
@@ -162,15 +194,23 @@ public static class DemoSeeder
             new(Sku("Oaxaca Pluma Hidalgo", Grind.WholeBean, 500), 1),
             new(Sku(MarkerProduct, Grind.Ground, 500), 1),
         ]);
-        await ActAsync(now.AddDays(-21), delivered, (orders, id) => orders.PayAsync(userId, id, ct));
         db.ChangeTracker.Clear();
         var order = await db.Orders.SingleAsync(o => o.Id == delivered, ct);
-        order.StartPreparing();
-        order.Ship();
-        order.Deliver();
-        await db.SaveChangesAsync(ct);
+        if (order.Status == OrderStatus.Pending)
+        {
+            await ActAsync(now.AddDays(-21), delivered, (orders, id) => orders.PayAsync(userId, id, ct));
+            db.ChangeTracker.Clear();
+            order = await db.Orders.SingleAsync(o => o.Id == delivered, ct);
+        }
+        if (order.Status == OrderStatus.Paid)
+        {
+            order.StartPreparing();
+            order.Ship();
+            order.Deliver();
+            await db.SaveChangesAsync(ct);
+        }
 
-        var cancelled = await PlaceAsync("demo-cancelled", now.AddDays(-10), [new(Sku("Veracruz Pluma", Grind.WholeBean, 500), 1)]);
+        var cancelled = await PlaceAsync(CancelledKey, now.AddDays(-10), [new(Sku("Veracruz Pluma", Grind.WholeBean, 500), 1)]);
         await ActAsync(now.AddDays(-10), cancelled, (orders, id) => orders.CancelAsync(userId, id, ct));
 
         async Task<int> PlaceAsync(string key, DateTimeOffset at, IReadOnlyList<OrderItem> items)

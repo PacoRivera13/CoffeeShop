@@ -67,7 +67,7 @@ public partial class InvoiceTests(MsSqlFixture fixture)
             (invoice.StorageKey, invoice.TotalSnapshot, invoice.Currency));
         Assert.True(await Storage.ExistsAsync(invoice.StorageKey, CancellationToken.None));
 
-        var url = await Storage.GetDownloadUrlAsync(invoice.StorageKey, TimeSpan.FromMinutes(5), CancellationToken.None);
+        var url = (await Storage.GetDownloadUrlAsync(invoice.StorageKey, TimeSpan.FromMinutes(5), CancellationToken.None)).Url;
         using var http = new HttpClient();
         var pdf = await http.GetByteArrayAsync(url);
         Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
@@ -89,7 +89,7 @@ public partial class InvoiceTests(MsSqlFixture fixture)
             SecretKey = fixture.MinioSecretKey,
         }), TimeProvider.System);
 
-        var url = await storage.GetDownloadUrlAsync(Invoice.StorageKeyFor(order.Id), TimeSpan.FromMinutes(5), CancellationToken.None);
+        var url = (await storage.GetDownloadUrlAsync(Invoice.StorageKeyFor(order.Id), TimeSpan.FromMinutes(5), CancellationToken.None)).Url;
 
         Assert.Equal(("localhost", publicEndpoint.Port), (url.Host, url.Port));
         using var http = new HttpClient();
@@ -101,7 +101,7 @@ public partial class InvoiceTests(MsSqlFixture fixture)
     {
         var (_, order) = await PlacePaidOrderAsync();
         await DrainAsync();
-        var url = await Storage.GetDownloadUrlAsync(Invoice.StorageKeyFor(order.Id), TimeSpan.FromMinutes(5), CancellationToken.None);
+        var url = (await Storage.GetDownloadUrlAsync(Invoice.StorageKeyFor(order.Id), TimeSpan.FromMinutes(5), CancellationToken.None)).Url;
 
         using var http = new HttpClient();
         var unsigned = await http.GetAsync(url.GetLeftPart(UriPartial.Path));

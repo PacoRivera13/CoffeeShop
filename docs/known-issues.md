@@ -27,3 +27,11 @@ Deliberate deferrals found during the 6c verification pass. Each entry: symptom,
 - **Cause:** its request-variable syntax (`{{name.response.body.$.x}}`) is the VS Code REST Client / Visual Studio
   syntax; the httpyac CLI does not support it.
 - **Why deferred:** both target editors support the syntax; switching to a CLI-friendly format would break them.
+
+## Outbox messages scheduled under a dev clock offset wait after it is removed
+
+- **Symptom:** after running with `Dev__ClockOffsetDays` and then restarting without it, an outbox message that was still
+  Pending or retrying is not dispatched until its `nextAttemptAt` (days ahead) is reached; e.g. an invoice never appears.
+- **Cause:** outbox timestamps, backoff and claim leases use the application clock, which was shifted when they were written.
+- **Why deferred:** the offset is a Development-only tool; rewriting timestamps on startup would add risk to production code
+  for a dev convenience. Workaround: let pending messages drain before removing the offset, or run `scripts/dev-reset`.

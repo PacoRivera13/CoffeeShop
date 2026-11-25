@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { MatButtonToggleHarness } from '@angular/material/button-toggle/testing';
 import { page } from 'vitest/browser';
 import { price, products } from '../../../../../testing/fixtures';
@@ -11,8 +11,11 @@ import { ProductCardComponent } from './product-card.component';
 describe('ProductCardComponent', () => {
   let http: HttpTestingController;
 
-  async function render(asOf?: string, canBuy?: boolean) {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+  async function render(asOf?: string, canBuy?: boolean, url = '/') {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([{ path: '**', children: [] }])],
+    });
+    await TestBed.inject(Router).navigateByUrl(url);
     http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(ProductCardComponent);
     fixture.componentRef.setInput('product', products[0]);
@@ -36,6 +39,15 @@ describe('ProductCardComponent', () => {
     await expect.element(signIn).toHaveAttribute('href', '/login?returnUrl=%2F');
     await expect.element(page.getByRole('button', { name: 'Add to cart' })).not.toBeInTheDocument();
     await expect.element(page.getByTestId('price')).toMatchTextContent(/300\.00/);
+  });
+
+  it('brings anonymous visitors back to the same catalogue view after signing in', async () => {
+    await render('2027-01-01T00:00:00Z', false, '/?asOf=2027-01-01T00:00:00Z');
+    http.expectOne((r) => r.url.endsWith('/skus/11/price')).flush(price(11, 345));
+
+    await expect
+      .element(page.getByRole('link', { name: 'Sign in to buy' }))
+      .toHaveAttribute('href', '/login?returnUrl=%2F%3FasOf%3D2027-01-01T00:00:00Z');
   });
 
   it('shows the product, a loading placeholder, then the price of the first SKU', async () => {

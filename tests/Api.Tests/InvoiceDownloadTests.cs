@@ -107,6 +107,21 @@ public class InvoiceDownloadTests(MsSqlFixture fixture)
     }
 
     [Fact]
+    public async Task Invoice_expiry_follows_the_real_clock_when_the_dev_clock_is_shifted()
+    {
+        var (customer, order) = await PlaceOrderAsync(pay: true);
+        await DrainAsync();
+        await using var shifted = fixture.CreateFactory(("Dev:ClockOffsetDays", "8"));
+        var client = shifted.CreateClient();
+        client.DefaultRequestHeaders.Authorization = customer.DefaultRequestHeaders.Authorization;
+
+        var invoice = await ReadyInvoiceAsync(client, order.Id);
+
+        // The URL is signed with the real clock, so the reported expiry must be real time too, not 8 days ahead.
+        Assert.InRange(invoice.ExpiresAt - DateTimeOffset.UtcNow, TimeSpan.FromMinutes(4.5), TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
     public async Task Admin_can_fetch_any_orders_invoice()
     {
         var (customer, order) = await PlaceOrderAsync(pay: true);

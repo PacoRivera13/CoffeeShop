@@ -77,6 +77,32 @@ public class DemoSeederTests(MsSqlFixture fixture)
     }
 
     [Fact]
+    public async Task A_seed_interrupted_after_the_catalogue_is_completed_by_the_next_run()
+    {
+        await using var factory = await fixture.CreateFactoryOnNewDatabaseAsync("CoffeeShopDemoResume");
+        var environment = factory.Services.GetRequiredService<IHostEnvironment>();
+        IConfiguration Settings(string password) => new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Seed:Demo"] = "true",
+            ["Seed:CustomerEmail"] = "resume@example.test",
+            ["Seed:CustomerPassword"] = password,
+        }).Build();
+
+        // A password Identity rejects makes the customer step fail after the catalogue has been committed.
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => factory.Services.SeedDemoAsync(Settings("weak"), environment));
+        await factory.Services.SeedDemoAsync(Settings(MsSqlFixture.DemoCustomerPassword), environment);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CoffeeShopDbContext>();
+        var chiapas = await db.Products.Where(p => p.Name == "Chiapas Altura").Select(p => p.Id).ToListAsync();
+        Assert.Single(chiapas);
+        Assert.Equal(13_500, await db.Inventories.Where(i => i.ProductId == chiapas[0]).Select(i => i.StockG).SingleAsync());
+        var statuses = await db.Customers.Where(c => c.Email == "resume@example.test")
+            .Join(db.Orders, c => c.Id, o => o.CustomerId, (_, o) => o.Status).ToListAsync();
+        Assert.Equal([OrderStatus.Pending, OrderStatus.Paid, OrderStatus.Delivered, OrderStatus.Cancelled], statuses.Order());
+    }
+
+    [Fact]
     public void Refuses_to_start_outside_Development()
     {
         using var factory = fixture.CreateFactory(("Seed:Demo", "true"))

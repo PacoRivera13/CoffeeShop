@@ -83,7 +83,8 @@ public partial class DevClockTests(MsSqlFixture fixture)
         Assert.Empty(offenders);
     }
 
-    [GeneratedRegex(@"\bDate(Time|TimeOffset)\.(UtcNow|Now|Today)\b")]
+    // Also catches reading the system TimeProvider directly, which would bypass the shifted and test clocks.
+    [GeneratedRegex(@"\bDate(Time|TimeOffset)\.(UtcNow|Now|Today)\b|\bTimeProvider\.System\.Get(UtcNow|LocalNow|Timestamp)\b")]
     private static partial Regex SystemClock();
 
     private static string RepositoryRoot()

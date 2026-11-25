@@ -165,9 +165,9 @@ internal sealed class OrderService(CoffeeShopDbContext db, IFileStorage storage,
         if (!await storage.ExistsAsync(invoice.StorageKey, ct))
             return new InvoiceAccessResult.Unavailable();
 
-        var expiresAt = clock.GetUtcNow() + OrderConstraints.InvoiceUrlLifetime;
-        var url = await storage.GetDownloadUrlAsync(invoice.StorageKey, OrderConstraints.InvoiceUrlLifetime, ct);
-        return new InvoiceAccessResult.Ready(url, expiresAt, invoice.InvoiceNumber);
+        // The signer reports the expiry on the clock it signs with (the real one), so it matches the URL exactly.
+        var link = await storage.GetDownloadUrlAsync(invoice.StorageKey, OrderConstraints.InvoiceUrlLifetime, ct);
+        return new InvoiceAccessResult.Ready(link.Url, link.ExpiresAt, invoice.InvoiceNumber);
     }
 
     public async Task<OrderPage> ListAsync(string userId, int page, int pageSize, CancellationToken ct)

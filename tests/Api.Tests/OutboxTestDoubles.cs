@@ -62,8 +62,10 @@ public sealed class FlakyFileStorage(IFileStorage inner, StorageScript script) :
 
     public Task<bool> ExistsAsync(string key, CancellationToken ct) => inner.ExistsAsync(key, ct);
 
-    public Task<Uri> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct) =>
+    public Task<DownloadUrl> GetDownloadUrlAsync(string key, TimeSpan expires, CancellationToken ct) =>
         inner.GetDownloadUrlAsync(key, expires, ct);
+
+    public Task<bool> IsReadyAsync(CancellationToken ct) => inner.IsReadyAsync(ct);
 
     public Task DeleteAsync(string key, CancellationToken ct) => inner.DeleteAsync(key, ct);
 }

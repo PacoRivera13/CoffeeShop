@@ -1,5 +1,5 @@
 using CoffeeShop.Infrastructure.Persistence;
-using CoffeeShop.Infrastructure.Storage;
+using CoffeeShop.Application.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -39,13 +39,13 @@ internal sealed class SqlServerHealthCheck(CoffeeShopDbContext db) : IHealthChec
     }
 }
 
-internal sealed class StorageHealthCheck(S3FileStorage storage) : IHealthCheck
+internal sealed class StorageHealthCheck(IFileStorage storage) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
         try
         {
-            return await storage.BucketExistsAsync().WaitAsync(ct) ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();
+            return await storage.IsReadyAsync(ct) ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();
         }
         catch (Exception) when (!ct.IsCancellationRequested)
         {
